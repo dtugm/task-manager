@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -21,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden m-4 ml-0 rounded-2xl bg-background shadow-sm border border-border/50 relative">
         <Header />
         <main className="flex-1 overflow-auto p-6 md:p-8 scroll-smooth">
-          {children}
+          <RoleGuard>{children}</RoleGuard>
         </main>
       </div>
     </div>

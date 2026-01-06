@@ -17,7 +17,7 @@ export function Sidebar({ className }: { className?: string }) {
   const rawNavigation = getNavigation(t);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const userRole = useUserRole();
+  const { role: userRole } = useUserRole();
 
   const isExpanded = !isCollapsed || isHovered;
 
@@ -142,7 +142,7 @@ export function MobileSidebar() {
   const { t } = useLanguage();
   const rawNavigation = getNavigation(t);
   const [open, setOpen] = useState(false);
-  const userRole = useUserRole();
+  const { role: userRole } = useUserRole();
 
   const navigation = rawNavigation.filter((item) => {
     if (item.href === "/") return true;

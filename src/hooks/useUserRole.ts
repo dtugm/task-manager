@@ -20,6 +20,7 @@ export function normalizeRole(role: string): string {
 
 export function useUserRole() {
   const [role, setRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -27,6 +28,7 @@ export function useUserRole() {
       const explicitRole = localStorage.getItem("user_role");
       if (explicitRole) {
         setRole(normalizeRole(explicitRole));
+        setIsLoading(false);
         return;
       }
 
@@ -49,8 +51,10 @@ export function useUserRole() {
       }
     } catch (e) {
       console.error("Failed to parse user role", e);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  return role;
+  return { role, isLoading };
 }
