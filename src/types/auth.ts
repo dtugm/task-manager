@@ -34,13 +34,15 @@ export interface AuthResponse {
 }
 
 export interface LoginCredentials {
-  email: string; // or username based on API docs, but standard is usually email
+  email?: string;
+  username?: string;
   password: string;
   organizationId: string;
 }
 
 export interface SignupData {
   fullName: string;
+  username: string;
   email: string;
   password: string;
 }
