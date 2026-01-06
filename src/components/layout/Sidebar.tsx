@@ -3,63 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Clock,
-  ClipboardList,
-  CheckSquare,
-  DollarSign,
-  Menu,
-  Tag,
-  Folder,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-} from "lucide-react";
+import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
-
-const getNavigation = (t: any) => [
-  { name: t.dashboard, href: "/", icon: LayoutDashboard },
-  { name: t.attendance, href: "/attendance", icon: Clock },
-  { name: t.attendanceLog, href: "/attendance-log", icon: ClipboardList },
-  { name: t.taskAssignment, href: "/task-assignment", icon: CheckSquare },
-  { name: t.reimbursement, href: "/reimbursement", icon: DollarSign },
-  {
-    name: t.reimbursementMgmt,
-    href: "/reimbursement-management",
-    icon: Settings,
-  },
-  {
-    name: t.projectMgmt,
-    href: "/project-management",
-    icon: Folder,
-  },
-  {
-    name: t.taskManagerMgr,
-    href: "/task-manager-for-manager",
-    icon: ClipboardList,
-  },
-  {
-    name: t.taskManagerSpv,
-    href: "/task-manager-for-supervisor",
-    icon: CheckSquare,
-  },
-  { name: t.myTask, href: "/my-task", icon: Tag },
-];
-
 import { useLanguage } from "@/contexts/language-context";
+import { useUserRole } from "@/hooks/useUserRole";
+import { getNavigation, roleAccess } from "./sidebar-config";
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const navigation = getNavigation(t);
+  const rawNavigation = getNavigation(t);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const userRole = useUserRole();
 
-  // Effective state: expanded if NOT collapsed OR if hovered while collapsed
   const isExpanded = !isCollapsed || isHovered;
+
+  const navigation = rawNavigation.filter((item) => {
+    if (item.href === "/") return true;
+    if (!userRole) return false;
+    if (userRole === "Super Admin") return true;
+    const allowedRoutes = roleAccess[userRole] || [];
+    return allowedRoutes.includes(item.href);
+  });
 
   return (
     <div
@@ -71,7 +39,6 @@ export function Sidebar({ className }: { className?: string }) {
       onMouseEnter={() => isCollapsed && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Toggle Button */}
       <div className="absolute -right-3 top-8 z-50">
         <Button
           variant="outline"
@@ -92,7 +59,6 @@ export function Sidebar({ className }: { className?: string }) {
 
       <div className="space-y-4 py-8 w-full flex flex-col h-full">
         <div className="px-4">
-          {/* Logo Area */}
           <div
             className={cn(
               "flex items-center gap-3 mb-10 px-2 transition-all duration-500",
@@ -112,7 +78,7 @@ export function Sidebar({ className }: { className?: string }) {
                 Geo AIT
               </h2>
               <p className="text-xs text-muted-foreground whitespace-nowrap">
-                Task Manager
+                {userRole || "Task Manager"}
               </p>
             </div>
           </div>
@@ -123,7 +89,6 @@ export function Sidebar({ className }: { className?: string }) {
               return (
                 <Link key={item.name} href={item.href}>
                   <div className="relative group">
-                    {/* Active Background Indicator */}
                     {isActive && (
                       <div
                         className={cn(
@@ -160,8 +125,6 @@ export function Sidebar({ className }: { className?: string }) {
                       >
                         {item.name}
                       </span>
-
-                      {/* Active Pill Strip on right (optional, keeping clean for now) */}
                     </Button>
                   </div>
                 </Link>
@@ -177,8 +140,17 @@ export function Sidebar({ className }: { className?: string }) {
 export function MobileSidebar() {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const navigation = getNavigation(t);
+  const rawNavigation = getNavigation(t);
   const [open, setOpen] = useState(false);
+  const userRole = useUserRole();
+
+  const navigation = rawNavigation.filter((item) => {
+    if (item.href === "/") return true;
+    if (!userRole) return false;
+    if (userRole === "Super Admin") return true;
+    const allowedRoutes = roleAccess[userRole] || [];
+    return allowedRoutes.includes(item.href);
+  });
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

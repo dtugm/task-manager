@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,11 +32,8 @@ import { useLanguage } from "@/contexts/language-context";
 const ORGANIZATION_ID =
   process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G";
 
-interface CreateRelatedTaskModalProps {
-  relatedTaskTitle: string;
-  parentTaskId: string;
-  parentProjectId: string;
-  targetRole?: "Supervisor" | "Employee"; // New prop
+interface CreateTaskModalProps {
+  userRole?: string;
   onTaskCreated?: () => void;
 }
 
@@ -46,13 +43,10 @@ interface Employee {
   email: string;
 }
 
-export function CreateRelatedTaskModal({
-  relatedTaskTitle,
-  parentTaskId,
-  parentProjectId,
-  targetRole = "Supervisor", // Default to Supervisor
+export function CreateTaskModal({
+  userRole = "Supervisor",
   onTaskCreated,
-}: CreateRelatedTaskModalProps) {
+}: CreateTaskModalProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,9 +65,8 @@ export function CreateRelatedTaskModal({
     points: 0,
     priority: "MEDIUM",
     dueDate: "",
-    projectId: parentProjectId,
+    projectId: "",
     assigneeIds: [],
-    parentTaskId: parentTaskId,
   });
 
   // Fetch projects and employees when dialog opens
@@ -129,17 +122,13 @@ export function CreateRelatedTaskModal({
       }
 
       usersSource.forEach((item: any) => {
-        const role = item.role?.toUpperCase() || "";
-        let matches = false;
-
-        if (targetRole === "Supervisor") {
-          matches = role === "SUPERVISOR";
-        } else {
-          // Employee matches User/Employee
-          matches = role === "USER" || role === "EMPLOYEE";
-        }
-
-        if (matches) {
+        // Filter by role = Employee
+        if (
+          item.role === "User" ||
+          item.role === "USER" ||
+          item.role === "Employee" ||
+          item.role === "EMPLOYEE"
+        ) {
           if (item.user && item.user.id) {
             mappedEmployees.push({
               id: item.user.id,
@@ -178,9 +167,8 @@ export function CreateRelatedTaskModal({
           points: 0,
           priority: "MEDIUM",
           dueDate: "",
-          projectId: parentProjectId,
+          projectId: "",
           assigneeIds: [],
-          parentTaskId: parentTaskId,
         });
         setSelectedEmployees([]);
         setEmployeeSearch("");
@@ -201,20 +189,15 @@ export function CreateRelatedTaskModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+        <Button>
           <Plus className="mr-2 h-4 w-4" />
-          {t.createRelatedTask}
+          {t.createTask}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl">{t.createRelatedTask}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {t.relatedTo}{" "}
-            <span className="text-foreground font-medium">
-              {relatedTaskTitle}
-            </span>
-          </p>
+          <DialogTitle className="text-xl">{t.createTask}</DialogTitle>
+          <p className="text-sm text-muted-foreground">{t.supervisorDesc}</p>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">

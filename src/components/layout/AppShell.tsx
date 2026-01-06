@@ -1,9 +1,17 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+
+  if (isAuthPage) {
+    return <main className="h-screen w-full bg-background">{children}</main>;
+  }
+
   return (
     <div className="flex h-screen bg-muted/20 text-foreground overflow-hidden">
       {/* Sidebar is self-contained with margins */}

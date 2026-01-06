@@ -1,29 +1,84 @@
 "use client";
 
-import { Bell, Search, Globe, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, Search, Globe, Moon, Sun, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "./Sidebar";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/language-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { authApi } from "@/lib/auth-api";
+import { UserContext } from "@/types/auth";
 
 export function Header() {
   const { setTheme, theme } = useTheme();
   const { language, setLanguage } = useLanguage();
+  const [userData, setUserData] = useState<UserContext | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      // Try to get from localStorage first
+      const cachedData = localStorage.getItem("user_data");
+      if (cachedData) {
+        try {
+          setUserData(JSON.parse(cachedData));
+        } catch (e) {
+          console.error("Failed to parse cached user data", e);
+        }
+      }
+
+      // Basic cookie parsing
+      const match = document.cookie.match(
+        new RegExp("(^| )accessToken=([^;]+)")
+      );
+      const token = match ? match[2] : null;
+
+      if (!token) return;
+
+      // If we have cached data, we might skip fetching, or fetch in background to update
+      // For this request, we'll fetch only if no cached data or maybe just once to ensure freshness?
+      // User said "fetched once when we login... so all needs to get current user can get from it without fetching again"
+      // So if cachedData exists, we return.
+      if (cachedData) return;
+
+      try {
+        const response = await authApi.getMe(token);
+        if (response.success) {
+          setUserData(response.data);
+          localStorage.setItem("user_data", JSON.stringify(response.data));
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data for header", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const userInitials = userData?.user?.fullName
+    ? userData.user.fullName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : "U";
+
+  const userRole = userData?.organizations?.[0]?.role || "User";
+
   return (
     <header className="bg-background/80 backdrop-blur-md sticky top-0 z-10 px-6 py-4">
       <div className="flex items-center gap-4">
         <MobileSidebar />
-
-        {/* Search Bar - styled as a pill */}
-        <div className="relative hidden md:block w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks, projects..."
-            className="pl-10 rounded-full bg-muted/50 border-transparent focus:bg-background transition-all duration-300"
-          />
-        </div>
 
         <div className="ml-auto flex items-center gap-2">
           <Button
@@ -47,18 +102,49 @@ export function Header() {
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
-          <div className="flex items-center gap-3 pl-2 ml-2">
-            <div className="hidden md:block text-right">
-              <p className="text-sm font-semibold leading-none">John Doe</p>
-              <p className="text-xs text-muted-foreground">Product Designer</p>
-            </div>
-            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-md">
-              <AvatarImage src="/avatars/john-doe.png" />
-              <AvatarFallback className="bg-gradient-to-tr from-violet-500 to-indigo-500 text-white">
-                JD
-              </AvatarFallback>
-            </Avatar>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex items-center gap-3 pl-2 ml-2 hover:bg-muted/50 p-2 h-auto rounded-full"
+              >
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-semibold leading-none">
+                    {userData?.user?.fullName || "Loading..."}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{userRole}</p>
+                </div>
+                <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-md">
+                  <AvatarImage src="/avatars/john-doe.png" />
+                  <AvatarFallback className="bg-gradient-to-tr from-violet-500 to-indigo-500 text-white">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => (window.location.href = "/settings")}
+                className="cursor-pointer"
+              >
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600 cursor-pointer"
+                onClick={() => {
+                  document.cookie = "accessToken=; path=/; max-age=0";
+                  localStorage.removeItem("user_data");
+                  window.location.href = "/login";
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

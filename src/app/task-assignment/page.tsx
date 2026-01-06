@@ -1,8 +1,18 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertCircle, Loader2, Plus, Trash2, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,278 +20,547 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tag,
-  CheckCircle2,
-  TrendingUp,
-  Clock,
-  AlertCircle,
-  Plus,
-  Search,
-  Calendar as CalendarIcon,
-  Trash2,
-  User,
-} from "lucide-react";
-import { CreateTaskModal } from "@/components/tasks/CreateTaskModal";
-import { useState } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { taskApi } from "@/lib/task-api";
+import { projectApi } from "@/lib/project-api";
+import { authApi } from "@/lib/auth-api";
+import { Task } from "@/types/task";
+import { Project } from "@/types/project";
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { TaskStats } from "@/components/tasks/TaskStats";
+import { TaskFilters } from "@/components/tasks/TaskFilters";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
+import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
 import { useLanguage } from "@/contexts/language-context";
+
+const ORGANIZATION_ID =
+  process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G";
+
+interface Manager {
+  id: string;
+  fullName: string;
+  email: string;
+}
 
 export default function TaskAssignmentPage() {
   const { t } = useLanguage();
-  const [date, setDate] = useState<Date>();
-  const [userRole, setUserRole] = useState("Executive"); // Default for demo
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOptionsLoading, setIsOptionsLoading] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  // Dialogs
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Task Detail
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Data
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
+
+  // Filter State
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Fetch tasks
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch current user if not already fetched
+      let userId = currentUserId;
+      if (!userId) {
+        const cachedData = localStorage.getItem("user_data");
+        if (cachedData) {
+          try {
+            const userData = JSON.parse(cachedData);
+            if (userData.user && userData.user.id) {
+              userId = userData.user.id;
+              setCurrentUserId(userId);
+            }
+          } catch (e) {
+            console.error("Failed to parse cached user data in tasks", e);
+          }
+        }
+
+        // Only fetch if not found in cache
+        if (!userId) {
+          const userResponse = await authApi.getCurrentUser(token);
+          if (userResponse.success && userResponse.data) {
+            userId = userResponse.data.id;
+            setCurrentUserId(userId);
+          }
+        }
+      }
+
+      const response = await taskApi.getCreatedTasksSummary(token);
+
+      if (response.success) {
+        let fetchedTasks = response.data.tasks;
+        // Client-side fallback for search if API ignores it or if specific behavior required
+        if (searchQuery) {
+          const lowerQuery = searchQuery.toLowerCase();
+          fetchedTasks = fetchedTasks.filter(
+            (task) =>
+              task.title.toLowerCase().includes(lowerQuery) ||
+              task.description.toLowerCase().includes(lowerQuery)
+          );
+        }
+
+        setTasks(fetchedTasks);
+        setTotalPages(1); // Assuming summary returns all tasks
+        setTotalTasks(response.data.totalTasks);
+      } else {
+        setError(response.error?.message || "Failed to fetch tasks");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchTasks();
+    }, 500); // Debounce
+    return () => clearTimeout(timer);
+  }, [currentPage, itemsPerPage, searchQuery]);
+
+  // Fetch projects
+  const fetchProjects = async () => {
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+    if (!token) return;
+
+    try {
+      const response = await projectApi.getAllProjects(token);
+      if (response.success && Array.isArray(response.data)) {
+        setProjects(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects", err);
+    }
+  };
+
+  // Fetch managers
+  const fetchManagers = async () => {
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+    if (!token) return;
+
+    try {
+      const response = await authApi.getOrganizationUsers(
+        token,
+        ORGANIZATION_ID,
+        1,
+        100
+      );
+
+      let rawData: any = response;
+      if (response && (response as any).success && (response as any).data) {
+        rawData = (response as any).data;
+      }
+
+      const mappedManagers: Manager[] = [];
+      let usersSource: any[] = [];
+
+      if (Array.isArray(rawData)) {
+        usersSource = rawData;
+      } else if (rawData && Array.isArray(rawData.data)) {
+        usersSource = rawData.data;
+      } else if (rawData && Array.isArray(rawData.users)) {
+        usersSource = rawData.users;
+      }
+
+      usersSource.forEach((item: any) => {
+        // Filter by role = Manager
+        if (item.role === "Manager" || item.role === "MANAGER") {
+          if (item.user && item.user.id) {
+            mappedManagers.push({
+              id: item.user.id,
+              fullName: item.user.fullName || item.user.username || "Unknown",
+              email: item.user.email,
+            });
+          } else if (item.id && (item.fullName || item.username)) {
+            mappedManagers.push({
+              id: item.id,
+              fullName: item.fullName || item.username || "Unknown",
+              email: item.email,
+            });
+          }
+        }
+      });
+
+      setManagers(mappedManagers);
+    } catch (err) {
+      console.error("Failed to fetch managers", err);
+    }
+  };
+
+  // Fetch projects and managers when dialogs open
+  useEffect(() => {
+    if (isCreateOpen || isEditOpen) {
+      const loadOptions = async () => {
+        setIsOptionsLoading(true);
+        try {
+          await Promise.all([fetchProjects(), fetchManagers()]);
+        } catch (error) {
+          console.error("Error loading options:", error);
+        } finally {
+          setIsOptionsLoading(false);
+        }
+      };
+      loadOptions();
+    }
+  }, [isCreateOpen, isEditOpen]);
+
+  // Delete task
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+    if (!token) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await taskApi.deleteTask(token, taskToDelete);
+      const isEmptyObject =
+        response &&
+        typeof response === "object" &&
+        Object.keys(response).length === 0;
+      const isSuccess = !response || response.success === true || isEmptyObject;
+
+      if (isSuccess) {
+        await fetchTasks();
+        setTaskToDelete(null);
+        setError(null);
+      } else {
+        setError(response.error?.message || "Failed to delete task");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to delete task");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Filter Logic
+  const filteredTasks = tasks.filter((task) => {
+    if (filterDateFrom || filterDateTo) {
+      const taskDate = new Date(task.dueDate);
+      if (filterDateFrom) {
+        const fromDate = new Date(filterDateFrom);
+        if (taskDate < fromDate) return false;
+      }
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (taskDate > toDate) return false;
+      }
+    }
+
+    if (filterProject !== "all") {
+      const projectId = task.project?.id || task.projectId;
+      if (projectId !== filterProject) return false;
+    }
+
+    if (filterPriority !== "all") {
+      if (task.priority !== filterPriority.toUpperCase()) return false;
+    }
+
+    if (filterStatus !== "all") {
+      if (filterStatus === "pending" && task.progress !== 0) return false;
+      if (
+        filterStatus === "in-progress" &&
+        (task.progress === 0 || task.progress === 100)
+      )
+        return false;
+      if (filterStatus === "completed" && task.progress !== 100) return false;
+    }
+
+    return true;
+  });
+
+  const stats = {
+    total: tasks.length,
+    completed: tasks.filter((t) => t.progress === 100).length,
+    inProgress: tasks.filter((t) => t.progress > 0 && t.progress < 100).length,
+    todo: tasks.filter((t) => t.progress === 0).length,
+  };
 
   return (
     <div className="space-y-8">
-      {/* Header Section */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            {t.taskAssignmentTitle}
+            {t.taskAssignment}
           </h2>
           <p className="text-muted-foreground">{t.taskAssignmentDesc}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t.search}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-8 w-full md:w-[250px]"
+            />
+          </div>
+
           <Button
-            variant="outline"
-            className="text-destructive border-destructive/20 hover:bg-destructive/10"
+            variant={deleteMode ? "destructive" : "outline"}
+            onClick={() => setDeleteMode(!deleteMode)}
+            className={
+              !deleteMode
+                ? "text-destructive border-destructive/20 hover:bg-destructive/10"
+                : ""
+            }
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            {t.deleteMode}
+            {deleteMode ? t.cancel : t.delete}
           </Button>
-          <CreateTaskModal userRole={userRole} />
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t.createTask}
+          </Button>
         </div>
       </div>
 
-      {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {/* Total Tasks */}
-        <div className="bg-blue-600 text-white rounded-xl p-4 shadow-lg shadow-blue-600/20 relative overflow-hidden h-32 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium opacity-90">
-              {t.totalTasks}
-            </span>
-            <Tag className="h-5 w-5 opacity-80" />
-          </div>
-          <div className="text-3xl font-bold">1</div>
-        </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Completed */}
-        <div className="bg-green-500 text-white rounded-xl p-4 shadow-lg shadow-green-500/20 relative overflow-hidden h-32 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium opacity-90">
-              {t.completed}
-            </span>
-            <CheckCircle2 className="h-6 w-6 opacity-80" />
-          </div>
-          <div className="text-3xl font-bold">0</div>
-        </div>
+      {/* Stats Cards */}
+      <TaskStats stats={stats} />
 
-        {/* In Progress */}
-        <div className="bg-purple-600 text-white rounded-xl p-4 shadow-lg shadow-purple-600/20 relative overflow-hidden h-32 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium opacity-90">
-              {t.inProgress}
-            </span>
-            <TrendingUp className="h-6 w-6 opacity-80" />
-          </div>
-          <div className="text-3xl font-bold">0</div>
-        </div>
+      {/* Filters Section */}
+      <TaskFilters
+        filterDateFrom={filterDateFrom}
+        setFilterDateFrom={setFilterDateFrom}
+        filterDateTo={filterDateTo}
+        setFilterDateTo={setFilterDateTo}
+        filterProject={filterProject}
+        setFilterProject={setFilterProject}
+        filterPriority={filterPriority}
+        setFilterPriority={setFilterPriority}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        projects={projects}
+        onClear={() => {
+          setFilterDateFrom("");
+          setFilterDateTo("");
+          setFilterProject("all");
+          setFilterPriority("all");
+          setFilterStatus("all");
+        }}
+      />
 
-        {/* To Do */}
-        <div className="bg-orange-500 text-white rounded-xl p-4 shadow-lg shadow-orange-500/20 relative overflow-hidden h-32 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium opacity-90">{t.todo}</span>
-            <Clock className="h-6 w-6 opacity-80" />
-          </div>
-          <div className="text-3xl font-bold">1</div>
-        </div>
-
-        {/* Pending Approval */}
-        <div className="bg-amber-500 text-white rounded-xl p-4 shadow-lg shadow-amber-500/20 relative overflow-hidden h-32 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium opacity-90">
-              {t.pendingApproval}
-            </span>
-            <AlertCircle className="h-6 w-6 opacity-80" />
-          </div>
-          <div className="text-3xl font-bold">0</div>
-        </div>
+      {/* Task List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-12 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : tasks.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              {t.noTasksFound}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredTasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              deleteMode={deleteMode}
+              onClick={(task) => {
+                setSelectedTask(task);
+                setIsDetailOpen(true);
+              }}
+              onEdit={(task) => {
+                setEditingTask(task);
+                setIsEditOpen(true);
+              }}
+              onConfirmDelete={(taskId) => setTaskToDelete(taskId)}
+            />
+          ))
+        )}
       </div>
 
-      {/* Filter Stats Section */}
-      <Card className="border-none shadow-sm">
-        <CardContent className="p-6 space-y-6">
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">{t.filterTasks}</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* Filter by Status */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t.filterByStatus}
-                </label>
-                <Select defaultValue="all">
-                  <SelectTrigger className="bg-muted/30 border-none shadow-sm h-10">
-                    <SelectValue placeholder={t.allStatus} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t.allStatus}</SelectItem>
-                    <SelectItem value="pending">{t.pending}</SelectItem>
-                    <SelectItem value="in-progress">{t.inProgress}</SelectItem>
-                    <SelectItem value="completed">{t.completed}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter by Project */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t.filterByProject}
-                </label>
-                <Select defaultValue="all">
-                  <SelectTrigger className="bg-muted/30 border-none shadow-sm h-10">
-                    <SelectValue placeholder={t.allProjects} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t.allProjects}</SelectItem>
-                    <SelectItem value="alpha">Project Alpha</SelectItem>
-                    <SelectItem value="beta">Project Beta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter by Priority */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t.filterByPriority}
-                </label>
-                <Select defaultValue="all">
-                  <SelectTrigger className="bg-muted/30 border-none shadow-sm h-10">
-                    <SelectValue placeholder={t.allPriority} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t.allPriority}</SelectItem>
-                    <SelectItem value="high">{t.high}</SelectItem>
-                    <SelectItem value="medium">{t.medium}</SelectItem>
-                    <SelectItem value="low">{t.low}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter by Date */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t.filterByDate}
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-muted/30 border-none shadow-sm h-10",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>{t.pickADate}</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Search Manager */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t.searchManager}
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t.searchByName}
-                    className="pl-9 bg-muted/30 border-none shadow-sm h-10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-sm text-muted-foreground pt-2">
-              {t.showingTasks} 0 of 0
-            </p>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {t.itemsPerPage}
+            </span>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Empty State / Task List Placeholder */}
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="font-semibold text-lg">Web Task Manager</h3>
-              <p className="text-muted-foreground text-sm">frontend backend</p>
-            </div>
-            <div className="flex gap-2">
-              <Badge
-                variant="secondary"
-                className="bg-red-100 text-red-700 hover:bg-red-100"
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {t.page} {currentPage} {t.of} {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
               >
-                {t.high}
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-gray-100 text-gray-700 hover:bg-gray-100"
+                {t.first}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
               >
-                {t.todo}
-              </Badge>
+                {t.previous}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                {t.next}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages}
+              >
+                {t.last}
+              </Button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex items-center gap-6 text-sm text-muted-foreground mb-6">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span>Sarah Connor</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              <span>GENERAL</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              <span>Dec 26, 2025</span>
-            </div>
-          </div>
+      {/* Create Task Dialog */}
+      <CreateTaskDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        projects={projects}
+        managers={managers}
+        isOptionsLoading={isOptionsLoading}
+        onTaskCreated={() => fetchTasks()}
+      />
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="flex items-center gap-2 text-blue-600 font-medium">
-                <TrendingUp className="h-4 w-4" />
-                Task Progress
-              </span>
-              <span className="font-bold">0%</span>
-            </div>
-            <Progress value={0} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Edit Task Dialog */}
+      <EditTaskDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        task={editingTask}
+        managers={managers}
+        isOptionsLoading={isOptionsLoading}
+        onTaskUpdated={() => fetchTasks()}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!taskToDelete}
+        onOpenChange={(open) => !open && setTaskToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.confirmDeletion}</DialogTitle>
+            <DialogDescription>{t.confirmDeletionDesc}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTaskToDelete(null)}
+              disabled={isSubmitting}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTask}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                t.delete
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onUpdate={() => {
+          fetchTasks();
+        }}
+      />
     </div>
   );
 }

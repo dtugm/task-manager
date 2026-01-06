@@ -1,0 +1,132 @@
+import { ApiResponse } from "@/types/auth";
+import {
+  Task,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  TasksResponse,
+  CreatedTasksSummaryResponse,
+} from "@/types/task";
+
+const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
+
+async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const response = await fetch(`${BASE_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || "An error occurred");
+  }
+
+  return data;
+}
+
+export const taskApi = {
+  getTasks: async (
+    token: string,
+    page: number = 1,
+    limit: number = 20,
+    assigneeId?: string,
+    creatorId?: string,
+    search?: string
+  ): Promise<TasksResponse> => {
+    let url = `/tasks?page=${page}&limit=${limit}`;
+    if (assigneeId) {
+      url += `&assigneeId=${assigneeId}`;
+    }
+    if (creatorId) {
+      url += `&creatorId=${creatorId}`;
+    }
+    if (search) {
+      url += `&title=${encodeURIComponent(search)}`;
+    }
+    return fetcher<TasksResponse>(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  createTask: async (
+    token: string,
+    data: CreateTaskRequest
+  ): Promise<ApiResponse<Task>> => {
+    return fetcher<ApiResponse<Task>>("/tasks", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTask: async (
+    token: string,
+    id: string,
+    data: UpdateTaskRequest
+  ): Promise<ApiResponse<Task>> => {
+    return fetcher<ApiResponse<Task>>(`/tasks/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteTask: async (token: string, id: string): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>(`/tasks/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  addComment: async (
+    token: string,
+    id: string,
+    data: { comment: string }
+  ): Promise<ApiResponse<any>> => {
+    return fetcher<ApiResponse<any>>(`/tasks/${id}/comments`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  getTaskLogs: async (
+    token: string,
+    id: string
+  ): Promise<ApiResponse<any[]>> => {
+    return fetcher<ApiResponse<any[]>>(`/tasks/${id}/logs`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  getCreatedTasksSummary: async (
+    token: string
+  ): Promise<CreatedTasksSummaryResponse> => {
+    return fetcher<CreatedTasksSummaryResponse>("/tasks/summary/created", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};

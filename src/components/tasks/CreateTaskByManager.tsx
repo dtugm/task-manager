@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,37 +32,33 @@ import { useLanguage } from "@/contexts/language-context";
 const ORGANIZATION_ID =
   process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G";
 
-interface CreateRelatedTaskModalProps {
-  relatedTaskTitle: string;
-  parentTaskId: string;
-  parentProjectId: string;
-  targetRole?: "Supervisor" | "Employee"; // New prop
+interface CreateTaskModalProps {
+  userRole?: string;
   onTaskCreated?: () => void;
 }
 
-interface Employee {
+interface Supervisor {
   id: string;
   fullName: string;
   email: string;
 }
 
-export function CreateRelatedTaskModal({
-  relatedTaskTitle,
-  parentTaskId,
-  parentProjectId,
-  targetRole = "Supervisor", // Default to Supervisor
+export function CreateTaskModal({
+  userRole = "Manager",
   onTaskCreated,
-}: CreateRelatedTaskModalProps) {
+}: CreateTaskModalProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Projects and Employees
+  // Projects and Supervisors
   const [projects, setProjects] = useState<Project[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employeeSearch, setEmployeeSearch] = useState("");
-  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
-  const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
+  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [supervisorSearch, setSupervisorSearch] = useState("");
+  const [showSupervisorDropdown, setShowSupervisorDropdown] = useState(false);
+  const [selectedSupervisors, setSelectedSupervisors] = useState<Supervisor[]>(
+    []
+  );
 
   // Form State
   const [formData, setFormData] = useState<CreateTaskRequest>({
@@ -71,16 +67,15 @@ export function CreateRelatedTaskModal({
     points: 0,
     priority: "MEDIUM",
     dueDate: "",
-    projectId: parentProjectId,
+    projectId: "",
     assigneeIds: [],
-    parentTaskId: parentTaskId,
   });
 
-  // Fetch projects and employees when dialog opens
+  // Fetch projects and supervisors when dialog opens
   useEffect(() => {
     if (open) {
       fetchProjects();
-      fetchEmployees();
+      fetchSupervisors();
     }
   }, [open]);
 
@@ -99,7 +94,7 @@ export function CreateRelatedTaskModal({
     }
   };
 
-  const fetchEmployees = async () => {
+  const fetchSupervisors = async () => {
     const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
     const token = match ? match[2] : null;
     if (!token) return;
@@ -117,7 +112,7 @@ export function CreateRelatedTaskModal({
         rawData = (response as any).data;
       }
 
-      const mappedEmployees: Employee[] = [];
+      const mappedSupervisors: Supervisor[] = [];
       let usersSource: any[] = [];
 
       if (Array.isArray(rawData)) {
@@ -129,25 +124,16 @@ export function CreateRelatedTaskModal({
       }
 
       usersSource.forEach((item: any) => {
-        const role = item.role?.toUpperCase() || "";
-        let matches = false;
-
-        if (targetRole === "Supervisor") {
-          matches = role === "SUPERVISOR";
-        } else {
-          // Employee matches User/Employee
-          matches = role === "USER" || role === "EMPLOYEE";
-        }
-
-        if (matches) {
+        // Filter by role = Supervisor
+        if (item.role === "Supervisor" || item.role === "SUPERVISOR") {
           if (item.user && item.user.id) {
-            mappedEmployees.push({
+            mappedSupervisors.push({
               id: item.user.id,
               fullName: item.user.fullName || item.user.username || "Unknown",
               email: item.user.email,
             });
           } else if (item.id && (item.fullName || item.username)) {
-            mappedEmployees.push({
+            mappedSupervisors.push({
               id: item.id,
               fullName: item.fullName || item.username || "Unknown",
               email: item.email,
@@ -156,9 +142,9 @@ export function CreateRelatedTaskModal({
         }
       });
 
-      setEmployees(mappedEmployees);
+      setSupervisors(mappedSupervisors);
     } catch (err) {
-      console.error("Failed to fetch employees", err);
+      console.error("Failed to fetch supervisors", err);
     }
   };
 
@@ -178,12 +164,11 @@ export function CreateRelatedTaskModal({
           points: 0,
           priority: "MEDIUM",
           dueDate: "",
-          projectId: parentProjectId,
+          projectId: "",
           assigneeIds: [],
-          parentTaskId: parentTaskId,
         });
-        setSelectedEmployees([]);
-        setEmployeeSearch("");
+        setSelectedSupervisors([]);
+        setSupervisorSearch("");
         setOpen(false);
 
         // Notify parent to refresh
@@ -201,20 +186,15 @@ export function CreateRelatedTaskModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+        <Button>
           <Plus className="mr-2 h-4 w-4" />
-          {t.createRelatedTask}
+          {t.createTask}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl">{t.createRelatedTask}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {t.relatedTo}{" "}
-            <span className="text-foreground font-medium">
-              {relatedTaskTitle}
-            </span>
-          </p>
+          <DialogTitle className="text-xl">{t.createTask}</DialogTitle>
+          <p className="text-sm text-muted-foreground">{t.taskManagerDesc}</p>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -309,49 +289,54 @@ export function CreateRelatedTaskModal({
           </div>
 
           <div className="space-y-2">
-            <Label>{t.assignToEmployees}</Label>
+            <Label>{t.assignToSupervisors}</Label>
             <div className="relative">
               <Input
-                placeholder={t.typeToSearchEmployees}
-                value={employeeSearch}
+                placeholder={t.typeToSearchSupervisors}
+                value={supervisorSearch}
                 onChange={(e) => {
-                  setEmployeeSearch(e.target.value);
-                  setShowEmployeeDropdown(true);
+                  setSupervisorSearch(e.target.value);
+                  setShowSupervisorDropdown(true);
                 }}
-                onFocus={() => setShowEmployeeDropdown(true)}
+                onFocus={() => setShowSupervisorDropdown(true)}
               />
-              {showEmployeeDropdown && employees.length > 0 && (
+              {showSupervisorDropdown && supervisors.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-[200px] overflow-auto">
-                  {employees
-                    .filter((emp) => {
-                      if (!employeeSearch) return true;
-                      const query = employeeSearch.toLowerCase();
+                  {supervisors
+                    .filter((sup) => {
+                      if (!supervisorSearch) return true;
+                      const query = supervisorSearch.toLowerCase();
                       return (
-                        emp.fullName.toLowerCase().includes(query) ||
-                        emp.email.toLowerCase().includes(query)
+                        sup.fullName.toLowerCase().includes(query) ||
+                        sup.email.toLowerCase().includes(query)
                       );
                     })
-                    .map((emp) => (
+                    .map((sup) => (
                       <div
-                        key={emp.id}
+                        key={sup.id}
                         className="px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
                         onClick={() => {
-                          if (!selectedEmployees.find((e) => e.id === emp.id)) {
-                            const newEmployees = [...selectedEmployees, emp];
-                            setSelectedEmployees(newEmployees);
+                          if (
+                            !selectedSupervisors.find((s) => s.id === sup.id)
+                          ) {
+                            const newSupervisors = [
+                              ...selectedSupervisors,
+                              sup,
+                            ];
+                            setSelectedSupervisors(newSupervisors);
                             setFormData({
                               ...formData,
-                              assigneeIds: newEmployees.map((e) => e.id),
+                              assigneeIds: newSupervisors.map((s) => s.id),
                             });
                           }
-                          setEmployeeSearch("");
-                          setShowEmployeeDropdown(false);
+                          setSupervisorSearch("");
+                          setShowSupervisorDropdown(false);
                         }}
                       >
                         <div className="flex flex-col">
-                          <span className="font-medium">{emp.fullName}</span>
+                          <span className="font-medium">{sup.fullName}</span>
                           <span className="text-xs text-muted-foreground">
-                            {emp.email}
+                            {sup.email}
                           </span>
                         </div>
                       </div>
@@ -359,25 +344,25 @@ export function CreateRelatedTaskModal({
                 </div>
               )}
             </div>
-            {selectedEmployees.length > 0 && (
+            {selectedSupervisors.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {selectedEmployees.map((emp) => (
+                {selectedSupervisors.map((sup) => (
                   <Badge
-                    key={emp.id}
+                    key={sup.id}
                     variant="secondary"
                     className="cursor-pointer"
                     onClick={() => {
-                      const newEmployees = selectedEmployees.filter(
-                        (e) => e.id !== emp.id
+                      const newSupervisors = selectedSupervisors.filter(
+                        (s) => s.id !== sup.id
                       );
-                      setSelectedEmployees(newEmployees);
+                      setSelectedSupervisors(newSupervisors);
                       setFormData({
                         ...formData,
-                        assigneeIds: newEmployees.map((e) => e.id),
+                        assigneeIds: newSupervisors.map((s) => s.id),
                       });
                     }}
                   >
-                    {emp.fullName} ×
+                    {sup.fullName} ×
                   </Badge>
                 ))}
               </div>

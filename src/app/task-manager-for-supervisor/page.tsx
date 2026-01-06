@@ -2,229 +2,278 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tag,
-  CheckCircle2,
-  TrendingUp,
-  Clock,
-  AlertCircle,
-  Check,
-} from "lucide-react";
-import { CreateTaskModal } from "@/components/tasks/CreateTaskModal";
-
+import { Trash2, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { CreateTaskModal } from "@/components/tasks/CreateTaskSupervisor";
+import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
+import { ExecutiveTaskStats } from "@/components/tasks/ExecutiveTaskStats";
+import { ManagerTaskFilters } from "@/components/tasks/ManagerTaskFilters";
+import { ExecutiveTaskCard } from "@/components/tasks/ExecutiveTaskCard";
 import { useLanguage } from "@/contexts/language-context";
+import { taskApi } from "@/lib/task-api";
+import { Task } from "@/types/task";
+import { useSupervisorTasks } from "@/hooks/useSupervisorTasks";
 
 export default function TaskManagerForSupervisorPage() {
   const { t } = useLanguage();
 
-  // Stats for Manager Tasks (Upstream)
-  const managerStats = [
-    {
-      label: t.totalTasks,
-      value: 0,
-      icon: Tag,
-      color: "bg-blue-600",
-      shadow: "shadow-blue-600/20",
-    },
-    {
-      label: t.pending,
-      value: 0,
-      icon: AlertCircle,
-      color: "bg-orange-500",
-      shadow: "shadow-orange-500/20",
-    },
-    {
-      label: t.inProgress,
-      value: 0,
-      icon: TrendingUp,
-      color: "bg-purple-600",
-      shadow: "shadow-purple-600/20",
-    },
-    {
-      label: t.completed,
-      value: 0,
-      icon: CheckCircle2,
-      color: "bg-green-500",
-      shadow: "shadow-green-500/20",
-    },
-  ];
+  // Custom Hook for Data Fetching & Strict Filtering
+  const {
+    executiveTasks, // Now filtered to assigned-to-me or created-by-me
+    projects,
+    employees,
+    isLoading,
+    isEmployeesLoading,
+    fetchTasks,
+  } = useSupervisorTasks();
 
-  // Stats for Employee Tasks (Downstream)
-  const empStats = [
-    {
-      label: t.assignedTasks,
-      value: 0,
-      icon: Tag,
-      color: "bg-blue-600",
-      shadow: "shadow-blue-600/20",
-    },
-    {
-      label: t.completed,
-      value: 0,
-      icon: CheckCircle2,
-      color: "bg-green-500",
-      shadow: "shadow-green-500/20",
-    },
-    {
-      label: t.inProgress,
-      value: 0,
-      icon: TrendingUp,
-      color: "bg-purple-600",
-      shadow: "shadow-purple-600/20",
-    },
-    {
-      label: t.todo,
-      value: 0,
-      icon: Clock,
-      color: "bg-orange-500",
-      shadow: "shadow-orange-500/20",
-    },
-  ];
+  // Local UI State
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+
+  // Filter State
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+    if (!token) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await taskApi.deleteTask(token, taskToDelete);
+      const isSuccess =
+        !response ||
+        response.success === true ||
+        (typeof response === "object" && Object.keys(response).length === 0);
+
+      if (isSuccess) {
+        await fetchTasks();
+        setTaskToDelete(null);
+      } else {
+        console.error("Failed to delete task", response?.error);
+      }
+    } catch (err) {
+      console.error("Failed to delete task", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Memoized filtered tasks
+  const filteredTasks = useMemo(() => {
+    return executiveTasks.filter((task) => {
+      if (filterSearch) {
+        const searchLower = filterSearch.toLowerCase();
+        const parentMatches =
+          task.title.toLowerCase().includes(searchLower) ||
+          (task.description &&
+            task.description.toLowerCase().includes(searchLower));
+
+        const childMatches = task.childTasks?.some(
+          (child) =>
+            child.title.toLowerCase().includes(searchLower) ||
+            (child.description &&
+              child.description.toLowerCase().includes(searchLower))
+        );
+
+        if (!parentMatches && !childMatches) return false;
+      }
+
+      if (filterDateFrom || filterDateTo) {
+        const taskDate = new Date(task.dueDate);
+        if (filterDateFrom) {
+          const fromDate = new Date(filterDateFrom);
+          if (taskDate < fromDate) return false;
+        }
+        if (filterDateTo) {
+          const toDate = new Date(filterDateTo);
+          toDate.setHours(23, 59, 59, 999);
+          if (taskDate > toDate) return false;
+        }
+      }
+
+      if (filterProject !== "all") {
+        const projectId = task.project?.id || task.projectId;
+        if (projectId !== filterProject) return false;
+      }
+
+      if (filterPriority !== "all") {
+        if (task.priority !== filterPriority.toUpperCase()) return false;
+      }
+
+      if (filterStatus !== "all") {
+        if (filterStatus === "pending" && task.progress !== 0) return false;
+        if (
+          filterStatus === "in-progress" &&
+          (task.progress === 0 || task.progress === 100)
+        )
+          return false;
+        if (filterStatus === "completed" && task.progress !== 100) return false;
+      }
+
+      return true;
+    });
+  }, [
+    executiveTasks,
+    filterSearch,
+    filterDateFrom,
+    filterDateTo,
+    filterProject,
+    filterPriority,
+    filterStatus,
+  ]);
+
+  const toggleExpand = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
+  };
 
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {t.supervisorDashboard}
-        </h2>
-        <p className="text-muted-foreground">{t.supervisorDesc}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Task Manager (Supervisor)
+          </h2>
+          <p className="text-muted-foreground">
+            Manage tasks and assign to employees
+          </p>
+        </div>
+        <Button
+          variant={deleteMode ? "destructive" : "outline"}
+          onClick={() => setDeleteMode(!deleteMode)}
+          className={
+            !deleteMode
+              ? "text-destructive border-destructive/20 hover:bg-destructive/10"
+              : ""
+          }
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          {deleteMode ? t.cancel : t.delete}
+        </Button>
       </div>
 
-      {/* SECTION 1: Tasks from Managers */}
-      <section className="space-y-6">
-        <h3 className="text-lg font-semibold">{t.tasksFromManagers}</h3>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {managerStats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={i}
-                className={`${stat.color} text-white rounded-xl p-4 shadow-lg ${stat.shadow} relative overflow-hidden h-32 flex flex-col justify-between`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-sm font-medium opacity-90">
-                    {stat.label}
-                  </span>
-                  <Icon className="h-6 w-6 opacity-80" />
-                </div>
-                <div className="text-3xl font-bold">{stat.value}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Empty State */}
-        <div className="h-48 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-muted-foreground bg-muted/10">
-          <Tag className="h-12 w-12 mb-3 text-muted-foreground/30" />
-          <p className="font-medium">{t.noTasksReceived}</p>
-        </div>
-      </section>
-
-      {/* SECTION 2: Employee Task Assignment */}
+      {/* SECTION 1: Tasks */}
       <section className="space-y-6">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">{t.employeeTaskAssignment}</h3>
-          {/* Pass 'Supervisor' role so they can see Points input (once enabled) */}
-          <CreateTaskModal userRole="Supervisor" />
+          <h3 className="text-lg font-semibold">{t.allTasks}</h3>
+          <CreateTaskModal userRole="Supervisor" onTaskCreated={fetchTasks} />
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {empStats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={i}
-                className={`${stat.color} text-white rounded-xl p-4 shadow-lg ${stat.shadow} relative overflow-hidden h-32 flex flex-col justify-between`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-sm font-medium opacity-90">
-                    {stat.label}
-                  </span>
-                  <Icon className="h-6 w-6 opacity-80" />
-                </div>
-                <div className="text-3xl font-bold">{stat.value}</div>
-              </div>
-            );
-          })}
-        </div>
+        <ExecutiveTaskStats tasks={executiveTasks} />
 
         {/* Filters */}
-        <Card className="border-none shadow-sm">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <h4 className="font-semibold text-sm text-muted-foreground mb-4">
-                {t.filterAssignments}
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t.filterByStatus}
-                  </label>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="bg-muted/30 border-none shadow-sm">
-                      <SelectValue placeholder={t.allStatus} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.allStatus}</SelectItem>
-                      <SelectItem value="pending">{t.pending}</SelectItem>
-                      <SelectItem value="progress">{t.inProgress}</SelectItem>
-                      <SelectItem value="completed">{t.completed}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t.filterByProject}
-                  </label>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="bg-muted/30 border-none shadow-sm">
-                      <SelectValue placeholder={t.allProjects} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.allProjects}</SelectItem>
-                      <SelectItem value="alpha">Project Alpha</SelectItem>
-                      <SelectItem value="beta">Project Beta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t.filterByPriority}
-                  </label>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="bg-muted/30 border-none shadow-sm">
-                      <SelectValue placeholder={t.allPriority} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.allPriority}</SelectItem>
-                      <SelectItem value="high">{t.high}</SelectItem>
-                      <SelectItem value="medium">{t.medium}</SelectItem>
-                      <SelectItem value="low">{t.low}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ManagerTaskFilters
+          filterSearch={filterSearch}
+          setFilterSearch={setFilterSearch}
+          filterDateFrom={filterDateFrom}
+          setFilterDateFrom={setFilterDateFrom}
+          filterDateTo={filterDateTo}
+          setFilterDateTo={setFilterDateTo}
+          filterProject={filterProject}
+          setFilterProject={setFilterProject}
+          filterPriority={filterPriority}
+          setFilterPriority={setFilterPriority}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          projects={projects}
+        />
 
-        {/* Empty State */}
-        <div className="h-48 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-muted-foreground bg-muted/10">
-          <Tag className="h-12 w-12 mb-3 text-muted-foreground/30" />
-          <p className="font-medium">{t.noTasksAssignedEmployee}</p>
-        </div>
+        {/* Task List */}
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-12 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : executiveTasks.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              {t.noTasksFromExecutivesEmpty}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredTasks.map((task) => (
+            <ExecutiveTaskCard
+              key={task.id}
+              task={task}
+              expandedTasks={expandedTasks}
+              toggleExpand={toggleExpand}
+              onSelectTask={(t) => {
+                setSelectedTask(t);
+                setIsDetailOpen(true);
+              }}
+              onEditTask={(t) => {
+                setEditingTask(t);
+                setIsEditOpen(true);
+              }}
+              onDeleteTask={(id) => setTaskToDelete(id)}
+              fetchTasks={fetchTasks}
+              deleteMode={deleteMode}
+              targetRole="Employee"
+            />
+          ))
+        )}
       </section>
+
+      {/* Edit Task Dialog */}
+      {editingTask && (
+        <EditTaskDialog
+          open={isEditOpen}
+          onOpenChange={(open) => {
+            setIsEditOpen(open);
+            if (!open) setEditingTask(null);
+          }}
+          task={editingTask}
+          managers={employees as any} // Pass employees as managers (generic assignees)
+          isOptionsLoading={isEmployeesLoading}
+          onTaskUpdated={fetchTasks}
+        />
+      )}
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          isOpen={isDetailOpen}
+          onClose={() => {
+            setIsDetailOpen(false);
+            setSelectedTask(null);
+          }}
+          task={selectedTask}
+          onUpdate={fetchTasks}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteTaskDialog
+        open={!!taskToDelete}
+        onOpenChange={(open) => !open && setTaskToDelete(null)}
+        onConfirm={handleDeleteTask}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

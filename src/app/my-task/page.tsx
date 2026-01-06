@@ -1,131 +1,154 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tag, CheckCircle2, TrendingUp, Clock, Award } from "lucide-react";
-
+import { useMemo, useState } from "react";
 import { useLanguage } from "@/contexts/language-context";
+import { Task } from "@/types/task";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { useMyTasks } from "@/hooks/useMyTasks";
+import { MyTaskStats } from "@/components/tasks/MyTaskStats";
+import { MyTaskFilters } from "@/components/tasks/MyTaskFilters";
+import { MyTaskCard } from "@/components/tasks/MyTaskCard";
 
 export default function MyTasksPage() {
   const { t } = useLanguage();
+  const { tasks, projects, isLoading, fetchTasks } = useMyTasks();
 
-  const stats = [
-    {
-      label: t.totalTasks,
-      value: 0,
-      icon: Tag,
-      color: "bg-blue-600",
-      shadow: "shadow-blue-600/20",
-    },
-    {
-      label: t.completed,
-      value: 0,
-      icon: CheckCircle2,
-      color: "bg-green-500",
-      shadow: "shadow-green-500/20",
-    },
-    {
-      label: t.inProgress,
-      value: 0,
-      icon: TrendingUp,
-      color: "bg-purple-600",
-      shadow: "shadow-purple-600/20",
-    },
-    {
-      label: t.todo,
-      value: 0,
-      icon: Clock,
-      color: "bg-orange-500",
-      shadow: "shadow-orange-500/20",
-    },
-    {
-      label: t.totalPoints,
-      value: 0,
-      icon: Award,
-      color: "bg-yellow-500",
-      shadow: "shadow-yellow-500/20",
-    },
-  ];
+  // Modal State
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Filter State
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Apply filters to tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      // Filter by search (task name)
+      if (filterSearch) {
+        const searchLower = filterSearch.toLowerCase();
+        if (!task.title.toLowerCase().includes(searchLower)) return false;
+      }
+
+      // Filter by date range
+      if (filterDateFrom || filterDateTo) {
+        const taskDate = new Date(task.dueDate);
+        if (filterDateFrom) {
+          const fromDate = new Date(filterDateFrom);
+          if (taskDate < fromDate) return false;
+        }
+        if (filterDateTo) {
+          const toDate = new Date(filterDateTo);
+          toDate.setHours(23, 59, 59, 999); // Include the entire end date
+          if (taskDate > toDate) return false;
+        }
+      }
+
+      // Filter by project
+      if (filterProject !== "all") {
+        const projectId = task.project?.id || task.projectId;
+        if (projectId !== filterProject) return false;
+      }
+
+      // Filter by priority
+      if (filterPriority !== "all") {
+        if (task.priority !== filterPriority.toUpperCase()) return false;
+      }
+
+      // Filter by status
+      if (filterStatus !== "all") {
+        if (filterStatus === "pending" && task.progress !== 0) return false;
+        if (
+          filterStatus === "in-progress" &&
+          (task.progress === 0 || task.progress === 100)
+        )
+          return false;
+        if (filterStatus === "completed" && task.progress !== 100) return false;
+      }
+
+      return true;
+    });
+  }, [
+    tasks,
+    filterSearch,
+    filterDateFrom,
+    filterDateTo,
+    filterProject,
+    filterPriority,
+    filterStatus,
+  ]);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Page Header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight">{t.myTasksTitle}</h2>
         <p className="text-muted-foreground">{t.myTasksDesc}</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={i}
-              className={`${stat.color} text-white rounded-xl p-4 shadow-lg ${stat.shadow} relative overflow-hidden h-32 flex flex-col justify-between`}
-            >
-              <div className="flex justify-between items-start">
-                <span className="text-sm font-medium opacity-90">
-                  {stat.label}
-                </span>
-                <Icon className="h-6 w-6 opacity-80" />
-              </div>
-              <div className="text-3xl font-bold">{stat.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      <section className="space-y-6">
+        {/* Stats Grid */}
+        <MyTaskStats tasks={tasks} />
 
-      {/* Filters */}
-      <Card className="border-none shadow-sm">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                {t.filterByStatus}
-              </label>
-              <Select defaultValue="all">
-                <SelectTrigger className="bg-muted/30 border-none shadow-sm h-10">
-                  <SelectValue placeholder={t.allStatus} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allStatus}</SelectItem>
-                  <SelectItem value="pending">{t.pending}</SelectItem>
-                  <SelectItem value="in-progress">{t.inProgress}</SelectItem>
-                  <SelectItem value="completed">{t.completed}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                {t.filterByProject}
-              </label>
-              <Select defaultValue="all">
-                <SelectTrigger className="bg-muted/30 border-none shadow-sm h-10">
-                  <SelectValue placeholder={t.allProjects} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allProjects}</SelectItem>
-                  <SelectItem value="alpha">Project Alpha</SelectItem>
-                  <SelectItem value="beta">Project Beta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Filters */}
+        <MyTaskFilters
+          filterSearch={filterSearch}
+          setFilterSearch={setFilterSearch}
+          filterDateFrom={filterDateFrom}
+          setFilterDateFrom={setFilterDateFrom}
+          filterDateTo={filterDateTo}
+          setFilterDateTo={setFilterDateTo}
+          filterProject={filterProject}
+          setFilterProject={setFilterProject}
+          filterPriority={filterPriority}
+          setFilterPriority={setFilterPriority}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          projects={projects}
+        />
 
-      {/* Empty State */}
-      <div className="h-80 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-muted-foreground bg-muted/10">
-        <Tag className="h-16 w-16 mb-4 text-muted-foreground/30" />
-        <p className="text-lg font-medium">{t.noTasksAssigned}</p>
-      </div>
+        {/* Task List */}
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-12 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : tasks.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              {t.noTasksAssigned}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredTasks.map((task) => (
+            <MyTaskCard
+              key={task.id}
+              task={task}
+              onClick={(task) => {
+                setSelectedTask(task);
+                setIsDetailOpen(true);
+              }}
+            />
+          ))
+        )}
+      </section>
+
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onUpdate={() => {
+          fetchTasks();
+        }}
+      />
     </div>
   );
 }

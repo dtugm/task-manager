@@ -57,6 +57,7 @@ type Translations = {
   reasonPlaceholder: string;
   status: string;
   date: string;
+  project: string;
   time: string;
   employee: string;
   activities: string;
@@ -142,6 +143,67 @@ type Translations = {
   description: string;
   save: string;
   cancel: string;
+  delete: string;
+  confirmDeletion: string;
+  confirmDeletionDesc: string;
+  deleteTask: string;
+  deleting: string;
+  noTasksFound: string;
+  itemsPerPage: string;
+  page: string;
+  of: string;
+  first: string;
+  previous: string;
+  next: string;
+  last: string;
+
+  // New keys for Manager/Supervisor pages
+  allTasks: string;
+  progressFromEmployees: string;
+  relatedTasks: string;
+  relatedTasksForEmployees: string;
+  assignedTo: string;
+  unassigned: string;
+  from: string;
+  unknown: string;
+  noTasksFromExecutivesEmpty: string;
+
+  // Filter keys
+  fromDate: string;
+  toDate: string;
+  priority: string;
+  searchPlaceholder: string;
+
+  // Forms & Modals
+  title: string;
+  enterTaskTitle: string;
+  enterTaskDesc: string;
+  points: string;
+  dueDate: string;
+  assignToSupervisors: string;
+  assignToEmployees: string;
+  typeToSearchSupervisors: string;
+  typeToSearchEmployees: string;
+  selectProject: string;
+  creating: string;
+  createRelatedTask: string;
+  relatedTo: string;
+
+  // Task Detail
+  assignedBy: string;
+  updateProgress: string;
+  slideToSetProgress: string;
+  saveProgress: string;
+  activityLogs: string;
+  noLogs: string;
+  addComment: string;
+  writeComment: string;
+  sendComment: string;
+  sending: string;
+  progressUpdated: string;
+  commentAdded: string;
+  totalAssigned: string;
+  progress: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -172,6 +234,7 @@ const translations: Record<Language, Translations> = {
     niceWork: "Nice work",
     keepItUp: "Keep it up",
     letsDoIt: "Let's do it",
+    project: "Project",
 
     // Attendance
     clockIn: "Clock In",
@@ -281,6 +344,68 @@ const translations: Record<Language, Translations> = {
     description: "Description",
     save: "Save",
     cancel: "Cancel",
+    delete: "Delete",
+    confirmDeletion: "Confirm Deletion",
+    confirmDeletionDesc:
+      "Are you sure you want to delete this task? This action cannot be undone.",
+    deleteTask: "Delete Task",
+    deleting: "Deleting...",
+    noTasksFound: "No tasks found. Create your first task to get started!",
+    itemsPerPage: "Items per page:",
+    page: "Page",
+    of: "of",
+    first: "First",
+    previous: "Previous",
+    next: "Next",
+    last: "Last",
+
+    // New keys for Manager/Supervisor pages
+    allTasks: "All Tasks",
+    progressFromEmployees: "Progress from Employees",
+    relatedTasks: "Related Task(s)",
+    relatedTasksForEmployees: "Related Tasks for Employees",
+    assignedTo: "Assigned to",
+    unassigned: "Unassigned",
+    from: "From",
+    unknown: "Unknown",
+    noTasksFromExecutivesEmpty: "No tasks from executives yet.",
+
+    // Filter keys
+    fromDate: "From Date",
+    toDate: "To Date",
+    priority: "Priority",
+    searchPlaceholder: "Search tasks...",
+
+    // Forms & Modals
+    title: "Title",
+    enterTaskTitle: "Enter task title",
+    enterTaskDesc: "Enter task description",
+    points: "Points",
+    dueDate: "Due Date",
+    assignToSupervisors: "Assign to Supervisors",
+    assignToEmployees: "Assign to Employees",
+    typeToSearchSupervisors: "Type to search supervisors...",
+    typeToSearchEmployees: "Type to search employees...",
+    selectProject: "Select project",
+    creating: "Creating...",
+    createRelatedTask: "Create Related Task",
+    relatedTo: "Related to:",
+
+    // Task Detail
+    assignedBy: "Assigned By",
+    updateProgress: "Update Progress",
+    slideToSetProgress: "Slide to set progress",
+    saveProgress: "Save Progress",
+    activityLogs: "Activity Logs & Comments",
+    noLogs: "No logs or comments yet.",
+    addComment: "Add Comment",
+    writeComment: "Write your update or comment...",
+    sendComment: "Send Comment",
+    sending: "Sending...",
+    progressUpdated: "Progress updated successfully",
+    commentAdded: "Comment added successfully",
+    totalAssigned: "Total Assigned",
+    progress: "Progress",
   },
   id: {
     dashboard: "Dasbor",
@@ -309,6 +434,7 @@ const translations: Record<Language, Translations> = {
     niceWork: "Kerja bagus",
     keepItUp: "Pertahankan",
     letsDoIt: "Ayo kerjakan",
+    project: "Proyek",
 
     // Attendance
     clockIn: "Masuk",
@@ -417,6 +543,69 @@ const translations: Record<Language, Translations> = {
     description: "Deskripsi",
     save: "Simpan",
     cancel: "Batal",
+    delete: "Hapus",
+    confirmDeletion: "Konfirmasi Penghapusan",
+    confirmDeletionDesc:
+      "Apakah Anda yakin ingin menghapus tugas ini? Tindakan ini tidak dapat dibatalkan.",
+    deleteTask: "Hapus Tugas",
+    deleting: "Menghapus...",
+    noTasksFound:
+      "Tugas tidak ditemukan. Buat tugas pertama Anda untuk memulai!",
+    itemsPerPage: "Item per halaman:",
+    page: "Halaman",
+    of: "dari",
+    first: "Pertama",
+    previous: "Sebelumnya",
+    next: "Selanjutnya",
+    last: "Terakhir",
+
+    // New keys for Manager/Supervisor pages
+    allTasks: "Semua Tugas",
+    progressFromEmployees: "Progres dari Karyawan",
+    relatedTasks: "Tugas Terkait",
+    relatedTasksForEmployees: "Tugas Terkait untuk Karyawan",
+    assignedTo: "Ditugaskan ke",
+    unassigned: "Belum Ditugaskan",
+    from: "Dari",
+    unknown: "Tidak Diketahui",
+    noTasksFromExecutivesEmpty: "Belum ada tugas dari eksekutif.",
+
+    // Filter keys
+    fromDate: "Dari Tanggal",
+    toDate: "Sampai Tanggal",
+    priority: "Prioritas",
+    searchPlaceholder: "Cari tugas...",
+
+    // Forms & Modals
+    title: "Judul",
+    enterTaskTitle: "Masukkan judul tugas",
+    enterTaskDesc: "Masukkan deskripsi tugas",
+    points: "Poin",
+    dueDate: "Tenggat Waktu",
+    assignToSupervisors: "Tugaskan ke Supervisor",
+    assignToEmployees: "Tugaskan ke Karyawan",
+    typeToSearchSupervisors: "Ketik untuk mencari supervisor...",
+    typeToSearchEmployees: "Ketik untuk mencari karyawan...",
+    selectProject: "Pilih proyek",
+    creating: "Sedang membuat...",
+    createRelatedTask: "Buat Tugas Terkait",
+    relatedTo: "Terkait dengan:",
+
+    // Task Detail
+    assignedBy: "Ditugaskan Oleh",
+    updateProgress: "Perbarui Progres",
+    slideToSetProgress: "Geser untuk mengatur progres",
+    saveProgress: "Simpan Progres",
+    activityLogs: "Riwayat Aktivitas & Komentar",
+    noLogs: "Belum ada riwayat atau komentar.",
+    addComment: "Tambah Komentar",
+    writeComment: "Tulis pembaruan atau komentar Anda...",
+    sendComment: "Kirim Komentar",
+    sending: "Mengirim...",
+    progressUpdated: "Progres berhasil diperbarui",
+    commentAdded: "Komentar berhasil ditambahkan",
+    totalAssigned: "Total Ditugaskan",
+    progress: "Progres",
   },
 };
 
