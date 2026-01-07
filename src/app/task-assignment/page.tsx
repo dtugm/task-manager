@@ -317,19 +317,28 @@ export default function TaskAssignmentPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="relative isolate space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in-50 duration-500 min-h-[calc(100vh-4rem)]">
+      {/* Decorative Background Blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob bg-[#0077FF]/30 dark:bg-[#0077FF]/20"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 bg-[#F1677C]/30 dark:bg-[#F1677C]/20"></div>
+        <div className="absolute bottom-0 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000 bg-[#FFB200]/30 dark:bg-[#FFB200]/20"></div>
+      </div>
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#0C426A] to-[#0077FF] dark:from-white dark:to-slate-300">
             {t.taskAssignment}
           </h2>
-          <p className="text-muted-foreground">{t.taskAssignmentDesc}</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            {t.taskAssignmentDesc}
+          </p>
         </div>
-        <div className="flex flex-col md:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="relative group flex-1 md:flex-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
             <Input
               placeholder={t.search}
               value={searchQuery}
@@ -337,34 +346,36 @@ export default function TaskAssignmentPage() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-8 w-full md:w-[250px]"
+              className="pl-10 w-full md:w-[280px] bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
             />
           </div>
 
-          <Button
-            variant={deleteMode ? "destructive" : "outline"}
-            onClick={() => setDeleteMode(!deleteMode)}
-            className={
-              !deleteMode
-                ? "text-destructive border-destructive/20 hover:bg-destructive/10"
-                : ""
-            }
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {deleteMode ? t.cancel : t.delete}
-          </Button>
-          <Button
-            onClick={() => setIsCreateOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t.createTask}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant={deleteMode ? "destructive" : "outline"}
+              onClick={() => setDeleteMode(!deleteMode)}
+              className={
+                !deleteMode
+                  ? "flex-1 md:flex-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all rounded-xl shadow-sm"
+                  : "flex-1 md:flex-none rounded-xl shadow-sm"
+              }
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deleteMode ? t.cancel : t.delete}
+            </Button>
+            <Button
+              onClick={() => setIsCreateOpen(true)}
+              className="flex-1 md:flex-none bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t.createTask}
+            </Button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-xl shadow-sm">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -374,66 +385,78 @@ export default function TaskAssignmentPage() {
       <TaskStats stats={stats} />
 
       {/* Filters Section */}
-      <TaskFilters
-        filterDateFrom={filterDateFrom}
-        setFilterDateFrom={setFilterDateFrom}
-        filterDateTo={filterDateTo}
-        setFilterDateTo={setFilterDateTo}
-        filterProject={filterProject}
-        setFilterProject={setFilterProject}
-        filterPriority={filterPriority}
-        setFilterPriority={setFilterPriority}
-        filterStatus={filterStatus}
-        setFilterStatus={setFilterStatus}
-        projects={projects}
-        onClear={() => {
-          setFilterDateFrom("");
-          setFilterDateTo("");
-          setFilterProject("all");
-          setFilterPriority("all");
-          setFilterStatus("all");
-        }}
-      />
+      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-white/5">
+        <TaskFilters
+          filterDateFrom={filterDateFrom}
+          setFilterDateFrom={setFilterDateFrom}
+          filterDateTo={filterDateTo}
+          setFilterDateTo={setFilterDateTo}
+          filterProject={filterProject}
+          setFilterProject={setFilterProject}
+          filterPriority={filterPriority}
+          setFilterPriority={setFilterPriority}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          projects={projects}
+          onClear={() => {
+            setFilterDateFrom("");
+            setFilterDateTo("");
+            setFilterProject("all");
+            setFilterPriority("all");
+            setFilterStatus("all");
+          }}
+        />
+      </div>
 
       {/* Task List */}
-      <div className="space-y-4">
+      <div className="grid gap-4">
         {isLoading ? (
-          <Card>
-            <CardContent className="p-12 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Card className="border-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm">
+            <CardContent className="p-16 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-[#0077FF]" />
+              <p className="text-muted-foreground font-medium">
+                Loading tasks...
+              </p>
             </CardContent>
           </Card>
         ) : tasks.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center text-muted-foreground">
-              {t.noTasksFound}
+          <Card className="border-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm">
+            <CardContent className="p-16 text-center">
+              <p className="text-lg font-medium text-slate-700 dark:text-slate-300">
+                {t.noTasksFound}
+              </p>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">
+                Try adjusting your filters or create a new task.
+              </p>
             </CardContent>
           </Card>
         ) : (
-          filteredTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              deleteMode={deleteMode}
-              onClick={(task) => {
-                setSelectedTask(task);
-                setIsDetailOpen(true);
-              }}
-              onEdit={(task) => {
-                setEditingTask(task);
-                setIsEditOpen(true);
-              }}
-              onConfirmDelete={(taskId) => setTaskToDelete(taskId)}
-            />
-          ))
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+            {filteredTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                deleteMode={deleteMode}
+                onClick={(task) => {
+                  setSelectedTask(task);
+                  setIsDetailOpen(true);
+                }}
+                onEdit={(task) => {
+                  setEditingTask(task);
+                  setIsEditOpen(true);
+                }}
+                onConfirmDelete={(taskId) => setTaskToDelete(taskId)}
+              />
+            ))}
+          </div>
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-xl p-4 border border-white/50 dark:border-white/5">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
               {t.itemsPerPage}
             </span>
             <Select
@@ -443,7 +466,7 @@ export default function TaskAssignmentPage() {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-20">
+              <SelectTrigger className="w-20 bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 rounded-lg">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -454,16 +477,17 @@ export default function TaskAssignmentPage() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
               {t.page} {currentPage} {t.of} {totalPages}
             </span>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
+                className="rounded-lg hover:bg-[#0077FF] hover:text-white transition-colors"
               >
                 {t.first}
               </Button>
@@ -472,6 +496,7 @@ export default function TaskAssignmentPage() {
                 size="sm"
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
+                className="rounded-lg hover:bg-[#0077FF] hover:text-white transition-colors"
               >
                 {t.previous}
               </Button>
@@ -480,6 +505,7 @@ export default function TaskAssignmentPage() {
                 size="sm"
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage >= totalPages}
+                className="rounded-lg hover:bg-[#0077FF] hover:text-white transition-colors"
               >
                 {t.next}
               </Button>
@@ -488,6 +514,7 @@ export default function TaskAssignmentPage() {
                 size="sm"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage >= totalPages}
+                className="rounded-lg hover:bg-[#0077FF] hover:text-white transition-colors"
               >
                 {t.last}
               </Button>
@@ -521,16 +548,21 @@ export default function TaskAssignmentPage() {
         open={!!taskToDelete}
         onOpenChange={(open) => !open && setTaskToDelete(null)}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-md rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>{t.confirmDeletion}</DialogTitle>
-            <DialogDescription>{t.confirmDeletionDesc}</DialogDescription>
+            <DialogTitle className="text-xl font-bold">
+              {t.confirmDeletion}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {t.confirmDeletionDesc}
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setTaskToDelete(null)}
               disabled={isSubmitting}
+              className="rounded-xl"
             >
               {t.cancel}
             </Button>
@@ -538,6 +570,7 @@ export default function TaskAssignmentPage() {
               variant="destructive"
               onClick={handleDeleteTask}
               disabled={isSubmitting}
+              className="rounded-xl bg-red-600 hover:bg-red-700"
             >
               {isSubmitting ? (
                 <>

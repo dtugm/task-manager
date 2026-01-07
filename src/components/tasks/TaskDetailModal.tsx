@@ -133,7 +133,7 @@ export function TaskDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
         <DialogHeader className="flex flex-row items-center justify-between border-b pb-4">
           <DialogTitle className="text-xl font-bold">
             {t.description}

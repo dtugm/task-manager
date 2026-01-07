@@ -1,5 +1,4 @@
 import { Tag, CheckCircle2, TrendingUp, Clock } from "lucide-react";
-
 import { useLanguage } from "@/contexts/language-context";
 
 interface TaskStatsProps {
@@ -16,34 +15,42 @@ export function TaskStats({ stats }: TaskStatsProps) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div className="bg-blue-600 text-white rounded-xl p-4 shadow-lg h-32 flex flex-col justify-between">
+      <div className="bg-gradient-to-br from-[#0077FF] to-[#0055AA] text-white rounded-2xl p-4 shadow-lg shadow-[#0077FF]/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
           <span className="text-sm font-medium opacity-90">{t.totalTasks}</span>
-          <Tag className="h-5 w-5 opacity-80" />
+          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+            <Tag className="h-4 w-4 text-white" />
+          </div>
         </div>
         <div className="text-3xl font-bold">{stats.total}</div>
       </div>
 
-      <div className="bg-green-500 text-white rounded-xl p-4 shadow-lg h-32 flex flex-col justify-between">
+      <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-4 shadow-lg shadow-green-500/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
           <span className="text-sm font-medium opacity-90">{t.completed}</span>
-          <CheckCircle2 className="h-6 w-6 opacity-80" />
+          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+            <CheckCircle2 className="h-4 w-4 text-white" />
+          </div>
         </div>
         <div className="text-3xl font-bold">{stats.completed}</div>
       </div>
 
-      <div className="bg-purple-600 text-white rounded-xl p-4 shadow-lg h-32 flex flex-col justify-between">
+      <div className="bg-gradient-to-br from-[#F1677C] to-[#D1475C] text-white rounded-2xl p-4 shadow-lg shadow-[#F1677C]/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
           <span className="text-sm font-medium opacity-90">{t.inProgress}</span>
-          <TrendingUp className="h-6 w-6 opacity-80" />
+          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+            <TrendingUp className="h-4 w-4 text-white" />
+          </div>
         </div>
         <div className="text-3xl font-bold">{stats.inProgress}</div>
       </div>
 
-      <div className="bg-orange-500 text-white rounded-xl p-4 shadow-lg h-32 flex flex-col justify-between">
+      <div className="bg-gradient-to-br from-[#FFB200] to-[#DF9200] text-white rounded-2xl p-4 shadow-lg shadow-[#FFB200]/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
           <span className="text-sm font-medium opacity-90">{t.todo}</span>
-          <Clock className="h-6 w-6 opacity-80" />
+          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+            <Clock className="h-4 w-4 text-white" />
+          </div>
         </div>
         <div className="text-3xl font-bold">{stats.todo}</div>
       </div>

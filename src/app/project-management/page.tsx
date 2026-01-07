@@ -1,54 +1,27 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
-import {
-  Plus,
-  Folder,
-  MoreHorizontal,
-  Loader2,
-  Pencil,
-  Trash2,
-  Eye,
-} from "lucide-react";
-import { projectApi } from "@/lib/project-api";
-import { Project } from "@/types/project";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { useState } from "react";
+import { LayoutGrid, Plus, Search, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
+import { useProjects } from "@/hooks/useProjects";
+import { ProjectDialogs } from "@/components/project-management/ProjectDialogs";
+import { ProjectsTable } from "@/components/project-management/ProjectsTable";
+import { Project } from "@/types/project";
 
 export default function ProjectManagementPage() {
   const { t } = useLanguage();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    projects,
+    isLoading,
+    error,
+    saveProject,
+    deleteProject,
+    isSaving,
+    isDeleting,
+  } = useProjects();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -58,36 +31,6 @@ export default function ProjectManagementPage() {
   // Delete Confirmation State
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
-
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchProjects = async () => {
-    setIsLoading(true);
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await projectApi.getAllProjects(token);
-      if (response.success) {
-        setProjects(response.data);
-      } else {
-        setError(response.error?.message || "Failed to fetch projects");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch projects");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
 
   const handleOpenCreate = () => {
     setEditingProject(null);
@@ -102,46 +45,9 @@ export default function ProjectManagementPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.name) return;
-    setError(null);
-
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-
-    if (!token) return;
-
-    try {
-      if (editingProject) {
-        // Update
-        const response = await projectApi.updateProject(
-          token,
-          editingProject.id,
-          { name: formData.name }
-        );
-        if (response.success) {
-          setProjects(
-            projects.map((p) =>
-              p.id === editingProject.id ? response.data : p
-            )
-          );
-          setIsDialogOpen(false);
-        } else {
-          setError(response.error?.message || "Failed to update project");
-        }
-      } else {
-        // Create
-        const response = await projectApi.createProject(token, {
-          name: formData.name,
-        });
-        if (response.success) {
-          setProjects([...projects, response.data]);
-          setIsDialogOpen(false);
-        } else {
-          setError(response.error?.message || "Failed to create project");
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to save project");
+    const success = await saveProject(editingProject, formData);
+    if (success) {
+      setIsDialogOpen(false);
     }
   };
 
@@ -152,177 +58,97 @@ export default function ProjectManagementPage() {
 
   const confirmDelete = async () => {
     if (!projectToDelete) return;
-
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-
-    if (!token) return;
-
-    try {
-      const response = await projectApi.deleteProject(token, projectToDelete);
-      if (response.success) {
-        setProjects(projects.filter((p) => p.id !== projectToDelete));
-        setIsDeleteOpen(false);
-        setProjectToDelete(null);
-      } else {
-        setError(response.error?.message || "Failed to delete project");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to delete project");
+    const success = await deleteProject(projectToDelete);
+    if (success) {
+      setIsDeleteOpen(false);
+      setProjectToDelete(null);
     }
   };
 
+  const filteredProjects = projects.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t.projectManagementTitle}
-          </h2>
-          <p className="text-muted-foreground">{t.projectManagementDesc}</p>
+    <div className="relative isolate space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in-50 duration-500 min-h-[calc(100vh-4rem)]">
+      {/* Decorative Background Blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob bg-[#0077FF]/30 dark:bg-[#0077FF]/20"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 bg-[#F1677C]/30 dark:bg-[#F1677C]/20"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000 bg-[#FFB200]/30 dark:bg-[#FFB200]/20"></div>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-[#0077FF] to-[#0C426A] shadow-lg shadow-[#0077FF]/20 text-white">
+              <LayoutGrid className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#0C426A] to-[#0077FF] dark:from-white dark:to-slate-300">
+                {t.projectManagementTitle}
+              </h1>
+              <p className="text-[#0C426A]/70 dark:text-slate-400 font-medium">
+                {t.projectManagementDesc}
+              </p>
+            </div>
+          </div>
         </div>
+
         <Button
           onClick={handleOpenCreate}
-          className="bg-blue-600 hover:bg-blue-700"
+          size="lg"
+          className="bg-[#0077FF] hover:bg-[#0077FF]/90 text-white shadow-lg shadow-[#0077FF]/25 dark:shadow-[#0077FF]/10 transition-all hover:scale-[1.02] active:scale-[0.98] rounded-xl font-medium"
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 h-5 w-5" />
           {t.newProject}
         </Button>
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingProject ? "Edit Project" : t.createNewProject}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProject
-                ? "Update the project details below."
-                : "Create a new project to start tracking tasks."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="p-name">{t.projectName}</Label>
-              <Input
-                id="p-name"
-                placeholder={t.projectNamePlaceholder}
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              {t.cancel || "Cancel"}
-            </Button>
-            <Button onClick={handleSave} disabled={!formData.name}>
-              {editingProject ? "Update" : t.saveProject}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this project? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
-              {t.cancel || "Cancel"}
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-md border border-red-200 text-sm">
-          {error}
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-2 animate-in slide-in-from-top-2">
+          <div className="p-1 rounded-full bg-red-100">
+            <Trash2 className="h-4 w-4" />
+          </div>
+          <span className="text-sm font-medium">{error}</span>
         </div>
       )}
 
-      {/* Projects List */}
-      <Card>
-        <CardContent className="p-0 mx-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.projectName}</TableHead>
-                <TableHead>{t.activeTasks}</TableHead>
-                <TableHead>{t.status}</TableHead>
-                <TableHead className="text-right">{t.actions}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                        <Folder className="h-4 w-4" />
-                      </div>
-                      {project.name}
-                    </div>
-                  </TableCell>
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+          <Input
+            placeholder={t.search || "Search projects..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-11 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border-slate-200 dark:border-slate-800 focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all rounded-xl hover:bg-white dark:hover:bg-slate-900 text-slate-900 dark:text-slate-100"
+          />
+        </div>
+      </div>
 
-                  <TableCell>0</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className="bg-green-100 text-green-700 hover:bg-green-100"
-                    >
-                      {t.active || "Active"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          (window.location.href = `/project-management/${project.id}/members`)
-                        }
-                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEdit(project)}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(project.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Projects List Card */}
+      <ProjectsTable
+        projects={filteredProjects}
+        isLoading={isLoading}
+        onEdit={handleOpenEdit}
+        onDelete={handleDeleteClick}
+      />
+
+      <ProjectDialogs
+        isDialogOpen={isDialogOpen}
+        setIsDialogOpen={setIsDialogOpen}
+        isDeleteOpen={isDeleteOpen}
+        setIsDeleteOpen={setIsDeleteOpen}
+        editingProject={editingProject}
+        formData={formData}
+        setFormData={setFormData}
+        onSave={handleSave}
+        onDelete={confirmDelete}
+        isSaving={isSaving}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

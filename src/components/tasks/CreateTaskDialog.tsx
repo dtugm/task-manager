@@ -110,7 +110,7 @@ export function CreateTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle>{t.createTask}</DialogTitle>
           <DialogDescription>{t.taskAssignmentDesc}</DialogDescription>

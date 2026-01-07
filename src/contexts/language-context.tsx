@@ -204,6 +204,22 @@ type Translations = {
   commentAdded: string;
   totalAssigned: string;
   progress: string;
+
+  // Project Members
+  backToProject: string;
+  addMember: string;
+  editRole: string;
+  removeMember: string;
+  searchUserHelp: string;
+  typeToSearchUsers: string;
+  noMembersFound: string;
+  tryAdjustingFilters: string;
+  role: string;
+  user: string;
+  member: string;
+  removeMemberConfirmTitle: string;
+  removeMemberConfirmDesc: string;
+  rowsPerPage: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -406,6 +422,23 @@ const translations: Record<Language, Translations> = {
     commentAdded: "Comment added successfully",
     totalAssigned: "Total Assigned",
     progress: "Progress",
+
+    // Project Members
+    backToProject: "Back to Project",
+    addMember: "Add Member",
+    editRole: "Edit Role",
+    removeMember: "Remove Member",
+    searchUserHelp: "Search for users to add to the team.",
+    typeToSearchUsers: "Type to search users...",
+    noMembersFound: "No members found",
+    tryAdjustingFilters: "Try adjusting your filters or add a new member.",
+    role: "Role",
+    user: "User",
+    member: "Member",
+    removeMemberConfirmTitle: "Remove Member",
+    removeMemberConfirmDesc:
+      "Are you sure you want to remove this member from the project?",
+    rowsPerPage: "Rows per page:",
   },
   id: {
     dashboard: "Dasbor",
@@ -606,6 +639,23 @@ const translations: Record<Language, Translations> = {
     commentAdded: "Komentar berhasil ditambahkan",
     totalAssigned: "Total Ditugaskan",
     progress: "Progres",
+
+    // Project Members
+    backToProject: "Kembali ke Proyek",
+    addMember: "Tambah Anggota",
+    editRole: "Edit Peran",
+    removeMember: "Hapus Anggota",
+    searchUserHelp: "Cari pengguna untuk ditambahkan",
+    typeToSearchUsers: "Ketik untuk mencari pengguna...",
+    noMembersFound: "Tidak ada anggota ditemukan",
+    tryAdjustingFilters: "Coba sesuaikan filter atau tambahkan anggota baru.",
+    role: "Peran",
+    user: "Pengguna",
+    member: "Anggota",
+    removeMemberConfirmTitle: "Hapus Anggota",
+    removeMemberConfirmDesc:
+      "Apakah Anda yakin ingin menghapus anggota ini dari proyek?",
+    rowsPerPage: "Baris per halaman:",
   },
 };
 

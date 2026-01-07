@@ -6,7 +6,13 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { roleAccess } from "@/components/layout/sidebar-config";
 import { Loader2 } from "lucide-react";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/signin", "/auth/signup"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth/signin",
+  "/auth/signup",
+  "/settings",
+];
 
 export function RoleGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -16,31 +22,30 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    // 1. Allow public paths
+    // Allow public paths
     if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
       return;
     }
 
-    // 2. If no role (not logged in), redirect to login
+    // If no role (not logged in), redirect to login
     if (!userRole) {
       router.push("/login");
       return;
     }
 
-    // 3. Super Admin has full access
+    // Super Admin has full access
     if (userRole === "Super Admin") {
       return;
     }
 
-    // 4. Dashboard (/) is always allowed for logged-in users
+    // Dashboard (/) is always allowed for logged-in users
     if (pathname === "/") {
       return;
     }
 
-    // 5. Check Role-Based Access
+    // Check Role-Based Access
     const allowedRoutes = roleAccess[userRole] || [];
 
-    // Check if current path matches any allowed route (exact or sub-path)
     const isAllowed = allowedRoutes.some(
       (route) => pathname === route || pathname.startsWith(`${route}/`)
     );
@@ -61,10 +66,6 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Optional: Don't render children until we're sure (prevents flash of content)
-  // However, useEffect runs after render.
-  // Ideally, if redirecting, we return null.
-
   if (
     !isLoading &&
     !userRole &&
@@ -73,12 +74,12 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // Logic check again for rendering to avoid flash
   if (
     !isLoading &&
     userRole &&
     userRole !== "Super Admin" &&
-    pathname !== "/"
+    pathname !== "/" &&
+    !PUBLIC_PATHS.some((path) => pathname.startsWith(path))
   ) {
     const allowedRoutes = roleAccess[userRole] || [];
     const isAllowed = allowedRoutes.some(

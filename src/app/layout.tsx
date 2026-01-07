@@ -13,6 +13,9 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Geo AIT Dashboard",
   description: "Task Management and HR Dashboard",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({

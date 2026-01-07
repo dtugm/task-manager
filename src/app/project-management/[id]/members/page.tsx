@@ -1,776 +1,217 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Loader2,
-  AlertCircle,
-  Check,
-  ChevronsUpDown,
-} from "lucide-react";
-import { projectApi } from "@/lib/project-api";
-import { authApi } from "@/lib/auth-api";
-import { Project } from "@/types/project";
-import { cn } from "@/lib/utils";
-
-// Define a type for the member based on expected API response
-interface Member {
-  id: string; // mapping id or user id
-  userId: string;
-  role: string;
-  user?: {
-    id: string;
-    fullName: string;
-    email: string;
-  };
-}
-
-interface OrgUser {
-  id: string;
-  fullName: string;
-  email: string;
-}
-
-const ORGANIZATION_ID =
-  process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G"; // Hardcoded as requested
+import { ArrowLeft, Plus, AlertCircle, Users, Sparkles } from "lucide-react";
+import { useLanguage } from "@/contexts/language-context";
+import { useProjectMembers, Member, OrgUser } from "@/hooks/useProjectMembers";
+import { MemberDialogs } from "@/components/project-management/MemberDialogs";
+import { MembersTable } from "@/components/project-management/MembersTable";
+import { MembersFilter } from "@/components/project-management/MembersFilter";
 
 export default function ProjectMembersPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.id as string;
+  const { t } = useLanguage();
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    project,
+    members,
+    isLoading, // Initial loading state
+    error,
+    orgUsers,
+    fetchOrgUsers,
+    addMember,
+    updateMemberRole,
+    removeMember,
+    isAddingMember,
+    isUpdatingRole,
+    isDeletingMember,
+  } = useProjectMembers(projectId);
 
-  // Add Member State
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newMemberId, setNewMemberId] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("Employee");
-  const [isAddingMember, setIsAddingMember] = useState(false);
-
-  // Combobox State
-  const [openCombobox, setOpenCombobox] = useState(false);
-  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
-  const [selectedUser, setSelectedUser] = useState<OrgUser | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Member Search State
+  // Filter State
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState("All");
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Edit Role State
+  // Dialog States
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  // Add Member Local State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [openCombobox, setOpenCombobox] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<OrgUser | null>(null);
+  const [newMemberId, setNewMemberId] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("Employee");
+
+  // Edit/Delete Selection State
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editRole, setEditRole] = useState("");
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
-
-  // Delete Confirmation
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDeletingMember, setIsDeletingMember] = useState(false);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Fetch Project Details
-      const projRes = await projectApi.getProjectById(token, projectId);
-      if (projRes.success) {
-        setProject(projRes.data);
-      } else {
-        setError(projRes.error?.message || "Failed to fetch project");
-      }
-
-      // Fetch Members
-      const memRes = await projectApi.getProjectUsers(token, projectId);
-      if (memRes.success) {
-        // Check structure and map user.id to userId
-        const data = memRes.data;
-        let rawMembers: any[] = [];
-
-        if (Array.isArray(data)) {
-          rawMembers = data;
-        } else if (data.data && Array.isArray(data.data)) {
-          rawMembers = data.data;
-        } else if (data.users && Array.isArray(data.users)) {
-          rawMembers = data.users;
-        }
-
-        // Map the data to ensure userId is extracted from user.id
-        const mappedMembers = rawMembers.map((member: any) => ({
-          ...member,
-          userId: member.user?.id || member.userId || member.id,
-        }));
-
-        setMembers(mappedMembers);
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchOrgUsers = async () => {
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-
-    if (!token) return;
-
-    try {
-      // Fetch logic for org users
-      const response = await authApi.getOrganizationUsers(
-        token,
-        ORGANIZATION_ID,
-        1,
-        50
-      ); // Fetch top 50
-
-      let rawData: any = response;
-      // If it's wrapped in ApiResponse structure
-      if (response && (response as any).success && (response as any).data) {
-        rawData = (response as any).data;
-      }
-
-      const mappedUsers: OrgUser[] = [];
-      let usersSource: any[] = [];
-
-      if (Array.isArray(rawData)) {
-        usersSource = rawData;
-      } else if (rawData && Array.isArray(rawData.data)) {
-        usersSource = rawData.data;
-      } else if (rawData && Array.isArray(rawData.users)) {
-        usersSource = rawData.users;
-      }
-
-      usersSource.forEach((item: any) => {
-        // Handle if item contains nested user object (as per screenshot)
-        if (item.user && item.user.id) {
-          mappedUsers.push({
-            id: item.user.id,
-            fullName: item.user.fullName || item.user.username || "Unknown",
-            email: item.user.email,
-          });
-        }
-        // Handle if item is the user object itself
-        else if (item.id && (item.fullName || item.username)) {
-          mappedUsers.push({
-            id: item.id,
-            fullName: item.fullName || item.username || "Unknown",
-            email: item.email,
-          });
-        }
-      });
-
-      setOrgUsers(mappedUsers);
-    } catch (err) {
-      console.error("Failed to fetch org users", err);
-    }
-  };
-
-  useEffect(() => {
-    if (projectId) {
-      fetchData();
-    }
-  }, [projectId]);
-
-  // Fetch users when add dialog opens and reset form when it closes
+  // Fetch org users when add dialog opens
   useEffect(() => {
     if (isAddOpen) {
       fetchOrgUsers();
     } else {
-      // Reset form when dialog closes
       setSearchQuery("");
       setNewMemberId("");
       setSelectedUser(null);
       setNewMemberRole("Employee");
       setOpenCombobox(false);
     }
-  }, [isAddOpen]);
+  }, [isAddOpen, fetchOrgUsers]);
 
   const handleAddMember = async () => {
     if (!newMemberId) return;
-
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-    if (!token) return;
-
-    setIsAddingMember(true);
-    try {
-      const response = await projectApi.addProjectUser(token, projectId, {
-        userId: newMemberId,
-        role: newMemberRole,
-      });
-
-      if (response.success) {
-        await fetchData();
-        setIsAddOpen(false);
-        setNewMemberId("");
-        setSelectedUser(null);
-        setNewMemberRole("Employee");
-        setSearchQuery("");
-        setOpenCombobox(false);
-      } else {
-        setError(response.error?.message || "Failed to add member");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to add member");
-    } finally {
-      setIsAddingMember(false);
-    }
+    const success = await addMember(newMemberId, newMemberRole);
+    if (success) setIsAddOpen(false);
   };
 
   const handleUpdateRole = async () => {
     if (!editingMember) return;
-
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-    if (!token) return;
-
-    setIsUpdatingRole(true);
-    try {
-      const response = await projectApi.updateProjectUserRole(
-        token,
-        projectId,
-        editingMember.userId || editingMember.id,
-        { role: editRole }
-      );
-
-      if (response.success) {
-        setMembers(
-          members.map((m) =>
-            m.id === editingMember.id ? { ...m, role: editRole } : m
-          )
-        );
-        setIsEditOpen(false);
-        setEditingMember(null);
-      } else {
-        setError(response.error?.message || "Failed to update role");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to update role");
-    } finally {
-      setIsUpdatingRole(false);
+    const success = await updateMemberRole(editingMember, editRole);
+    if (success) {
+      setIsEditOpen(false);
+      setEditingMember(null);
     }
   };
 
   const handleDeleteMember = async () => {
     if (!memberToDelete) return;
-
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-    if (!token) return;
-
-    setIsDeletingMember(true);
-    try {
-      // Use userId field from member object
-      const userIdToDelete = memberToDelete.userId;
-
-      console.log("Deleting member:", {
-        projectId,
-        userId: userIdToDelete,
-        memberData: memberToDelete,
-      });
-
-      const response = await projectApi.removeProjectUser(
-        token,
-        projectId,
-        userIdToDelete
-      );
-
-      console.log("Delete response:", response);
-
-      // Handle success:
-      // - response.success === true
-      // - Empty object {} (from 204 No Content)
-      // - null/undefined
-      const isEmptyObject =
-        response &&
-        typeof response === "object" &&
-        Object.keys(response).length === 0;
-      const isSuccess = !response || response.success === true || isEmptyObject;
-
-      if (isSuccess) {
-        setMembers(members.filter((m) => m.id !== memberToDelete.id));
-        setIsDeleteOpen(false);
-        setMemberToDelete(null);
-        setError(null);
-      } else {
-        setError(response.error?.message || "Failed to remove member");
-      }
-    } catch (err: any) {
-      console.error("Delete member error:", err);
-      setError(err.message || "Failed to remove member");
-    } finally {
-      setIsDeletingMember(false);
+    const success = await removeMember(memberToDelete);
+    if (success) {
+      setIsDeleteOpen(false);
+      setMemberToDelete(null);
     }
   };
 
-  const openEditRole = (member: Member) => {
+  const openEditDialog = (member: Member) => {
     setEditingMember(member);
     setEditRole(member.role);
     setIsEditOpen(true);
   };
 
-  const openDeleteConfirm = (member: Member) => {
+  const openDeleteDialog = (member: Member) => {
     setMemberToDelete(member);
     setIsDeleteOpen(true);
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {project?.name || "Project Members"}
-          </h2>
-          <p className="text-muted-foreground">
-            Manage members and their roles.
-          </p>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <Input
-            placeholder="Search members..."
-            value={memberSearchQuery}
-            onChange={(e) => setMemberSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <Button
-            onClick={() => setIsAddOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+    <div className="relative isolate space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in-50 duration-500 min-h-[calc(100vh-4rem)]">
+      {/* Decorative Background Blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob bg-purple-300 dark:bg-purple-900/30"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 bg-indigo-300 dark:bg-indigo-900/30"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000 bg-pink-300 dark:bg-pink-900/30"></div>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div
+            className="flex items-center gap-2 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer w-fit group"
+            onClick={() => router.back()}
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
+            <div className="p-1 rounded-full group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium">{t.backToProject}</span>
+          </div>
+          <div className="flex items-center gap-3 mt-2">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 text-white">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300">
+                {project?.name || t.projectMgmt}
+              </h1>
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Sparkles className="h-3 w-3 text-indigo-400" />
+                <p>{t.projectManagementDesc}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <Button
+          onClick={() => setIsAddOpen(true)}
+          size="lg"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/50 transition-all hover:scale-[1.02] active:scale-[0.98] rounded-xl"
+        >
+          <Plus className="mr-2 h-5 w-5" />
+          {t.addMember}
+        </Button>
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert
+          variant="destructive"
+          className="border-red-200 bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-200 dark:border-red-800"
+        >
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <Card>
-        <CardContent className="p-0 mx-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User ID / Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.length === 0 && !isLoading && (
-                <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No members found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {(() => {
-                const filteredMembers = members.filter((member) => {
-                  if (!memberSearchQuery) return true;
-                  const query = memberSearchQuery.toLowerCase();
-                  const name = (
-                    member.user?.fullName ||
-                    member.userId ||
-                    member.id
-                  ).toLowerCase();
-                  return name.includes(query);
-                });
+      {/* Components */}
+      <MembersFilter
+        memberSearchQuery={memberSearchQuery}
+        setMemberSearchQuery={setMemberSearchQuery}
+        selectedRoleFilter={selectedRoleFilter}
+        setSelectedRoleFilter={setSelectedRoleFilter}
+        isRoleFilterOpen={isRoleFilterOpen}
+        setIsRoleFilterOpen={setIsRoleFilterOpen}
+      />
 
-                const totalPages = Math.ceil(
-                  filteredMembers.length / itemsPerPage
-                );
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const paginatedMembers = filteredMembers.slice(
-                  startIndex,
-                  endIndex
-                );
+      <MembersTable
+        members={members}
+        isLoading={isLoading}
+        selectedRoleFilter={selectedRoleFilter}
+        memberSearchQuery={memberSearchQuery}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={setItemsPerPage}
+        onEdit={openEditDialog}
+        onDelete={openDeleteDialog}
+      />
 
-                return paginatedMembers.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">
-                      {member.user?.fullName || member.userId || member.id}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{member.role}</Badge>
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditRole(member)}
-                        >
-                          Edit Role
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteConfirm(member)}
-                          className="text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ));
-              })()}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-between px-4 py-4 border-t">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Items per page:
-              </span>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setItemsPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {(() => {
-                const filteredCount = members.filter((member) => {
-                  if (!memberSearchQuery) return true;
-                  const query = memberSearchQuery.toLowerCase();
-                  const name = (
-                    member.user?.fullName ||
-                    member.userId ||
-                    member.id
-                  ).toLowerCase();
-                  return name.includes(query);
-                }).length;
-                const totalPages = Math.ceil(filteredCount / itemsPerPage);
-
-                return (
-                  <>
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages || 1}
-                    </span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                      >
-                        First
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage >= totalPages}
-                      >
-                        Next
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage >= totalPages}
-                      >
-                        Last
-                      </Button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Add Member Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent
-          className="overflow-visible"
-          onInteractOutside={(e) => {
-            // Prevent closing when clicking on Popover
-            const target = e.target as HTMLElement;
-            if (target.closest("[data-radix-popper-content-wrapper]")) {
-              e.preventDefault();
-            }
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
-            <DialogDescription>
-              Search and add a user to this project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>User</Label>
-              <div className="relative">
-                <Input
-                  placeholder="Type to search users..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setOpenCombobox(true);
-                  }}
-                  onFocus={() => setOpenCombobox(true)}
-                  className="w-full"
-                />
-                {openCombobox && orgUsers.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-[300px] overflow-auto">
-                    {orgUsers
-                      .filter((user) => {
-                        if (!searchQuery) return true;
-                        const query = searchQuery.toLowerCase();
-                        return (
-                          user.fullName.toLowerCase().includes(query) ||
-                          user.email.toLowerCase().includes(query)
-                        );
-                      })
-                      .map((user) => (
-                        <div
-                          key={user.id}
-                          className="px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setNewMemberId(user.id);
-                            setSearchQuery(user.fullName);
-                            setOpenCombobox(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium">{user.fullName}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {user.email}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    {orgUsers.filter((user) => {
-                      if (!searchQuery) return true;
-                      const query = searchQuery.toLowerCase();
-                      return (
-                        user.fullName.toLowerCase().includes(query) ||
-                        user.email.toLowerCase().includes(query)
-                      );
-                    }).length === 0 && (
-                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                        No users found
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Executive">Executive</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Supervisor">Supervisor</SelectItem>
-                  <SelectItem value="Employee">Employee</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddOpen(false)}
-              disabled={isAddingMember}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddMember}
-              disabled={!newMemberId || isAddingMember}
-            >
-              {isAddingMember ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                "Add Member"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Role Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Role</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={editRole} onValueChange={setEditRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Executive">Executive</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Supervisor">Supervisor</SelectItem>
-                  <SelectItem value="Employee">Employee</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditOpen(false)}
-              disabled={isUpdatingRole}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateRole} disabled={isUpdatingRole}>
-              {isUpdatingRole ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Role"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirm Dialog */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Member</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove this member from the project?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteOpen(false)}
-              disabled={isDeletingMember}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteMember}
-              disabled={isDeletingMember}
-            >
-              {isDeletingMember ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Removing...
-                </>
-              ) : (
-                "Remove"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MemberDialogs
+        isAddOpen={isAddOpen}
+        setIsAddOpen={setIsAddOpen}
+        isEditOpen={isEditOpen}
+        setIsEditOpen={setIsEditOpen}
+        isDeleteOpen={isDeleteOpen}
+        setIsDeleteOpen={setIsDeleteOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        orgUsers={orgUsers}
+        onAddMember={handleAddMember}
+        isAddingMember={isAddingMember}
+        openCombobox={openCombobox}
+        setOpenCombobox={setOpenCombobox}
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
+        setNewMemberId={setNewMemberId}
+        newMemberRole={newMemberRole}
+        setNewMemberRole={setNewMemberRole}
+        editRole={editRole}
+        setEditRole={setEditRole}
+        onUpdateRole={handleUpdateRole}
+        isUpdatingRole={isUpdatingRole}
+        onDeleteMember={handleDeleteMember}
+        isDeletingMember={isDeletingMember}
+      />
     </div>
   );
 }

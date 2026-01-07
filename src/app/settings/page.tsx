@@ -16,9 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
-// Actually I don't see use-toast in the previous file list, I'll stick to Alert for now or check if it exists in next step.
-// To be safe I'll use Alert for success too.
+import { Loader2, User as UserIcon, Mail, Lock, Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -46,7 +44,7 @@ export default function SettingsPage() {
     const fetchUser = async () => {
       const token = getToken();
       if (!token) {
-        router.push("/login"); // Middleware should handle this but double check
+        router.push("/login");
         return;
       }
 
@@ -127,82 +125,149 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#0077FF]" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-10 max-w-2xl text-card-foreground">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-          <CardDescription>
-            Update your personal information and password.
+    <div className="relative isolate flex items-center justify-center animate-in fade-in-50 duration-500">
+      {/* Decorative Background Blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob bg-[#0077FF]/40"></div>
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 bg-[#F1677C]/40"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000 bg-[#FFB200]/40"></div>
+      </div>
+
+      <Card className="w-full max-w-2xl border-0 shadow-2xl shadow-slate-200/40 dark:shadow-black/40 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md ring-1 ring-white/50 dark:ring-white/5 rounded-3xl overflow-hidden">
+        <CardHeader className="text-center border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-800/30">
+          <div className="mx-auto p-4 rounded-2xl bg-gradient-to-br from-[#0077FF] to-[#0C426A] shadow-lg shadow-[#0077FF]/20 text-white mb-4 w-fit">
+            <Settings className="h-8 w-8" />
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#0C426A] to-[#0077FF] dark:from-white dark:to-slate-300">
+            Profile Settings
+          </CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400 text-base mt-2">
+            Update your personal information and security preferences.
           </CardDescription>
         </CardHeader>
+
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 pt-8 px-8">
             {message && (
               <Alert
-                variant={message.type === "success" ? "default" : "destructive"}
-                className={
+                className={`border-0 rounded-xl shadow-sm ${
                   message.type === "success"
-                    ? "border-green-500 text-green-500"
-                    : ""
-                }
+                    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                    : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                }`}
               >
-                <AlertDescription>{message.text}</AlertDescription>
+                <AlertDescription className="font-medium text-center">
+                  {message.text}
+                </AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-              />
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2.5">
+                <Label
+                  htmlFor="fullName"
+                  className="text-slate-700 dark:text-slate-300 font-medium"
+                >
+                  Full Name
+                </Label>
+                <div className="relative group">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="John Doe"
+                    className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <Label
+                  htmlFor="username"
+                  className="text-slate-700 dark:text-slate-300 font-medium"
+                >
+                  Username
+                </Label>
+                <div className="relative group">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="johndoe"
+                    className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="johndoe"
-              />
+            <div className="space-y-2.5">
+              <Label
+                htmlFor="email"
+                className="text-slate-700 dark:text-slate-300 font-medium"
+              >
+                Email Address
+              </Label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@example.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password (Optional)</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave blank to keep current password"
-              />
+            <div className="space-y-2.5 pt-2">
+              <Label
+                htmlFor="password"
+                className="text-slate-700 dark:text-slate-300 font-medium"
+              >
+                New Password{" "}
+                <span className="text-slate-400 font-normal ml-1">
+                  (Optional)
+                </span>
+              </Label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Leave blank to keep current password"
+                  className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                />
+              </div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+
+          <CardFooter className="flex justify-end pt-4 pb-8 px-8">
+            <Button
+              type="submit"
+              disabled={isSaving}
+              size="lg"
+              className="w-full sm:w-auto bg-[#0077FF] hover:bg-[#0077FF]/90 text-white shadow-lg shadow-[#0077FF]/25 dark:shadow-[#0077FF]/10 transition-all hover:scale-[1.02] active:scale-[0.98] rounded-xl font-medium"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Changes...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </CardFooter>
         </form>
