@@ -97,12 +97,17 @@ export function useProjects() {
 
     try {
       const response = await projectApi.deleteProject(token, id);
-      if (response.success) {
+      // Check for explicit success or empty object (204 No Content)
+      const isSuccess =
+        response.success === true ||
+        (response && Object.keys(response).length === 0);
+
+      if (isSuccess) {
         setProjects((prev) => prev.filter((p) => p.id !== id));
       } else {
         setError(response.error?.message || "Failed to delete project");
       }
-      return response.success;
+      return isSuccess;
     } catch (err: any) {
       setError(err.message || "Failed to delete project");
       return false;
