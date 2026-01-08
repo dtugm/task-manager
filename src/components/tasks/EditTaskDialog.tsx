@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Project } from "@/types/project";
 import { Task, UpdateTaskRequest } from "@/types/task";
 import { taskApi } from "@/lib/task-api";
 import { useLanguage } from "@/contexts/language-context";
@@ -37,6 +38,7 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task: Task | null;
   managers: Manager[];
+  projects: Project[];
   isOptionsLoading: boolean;
   onTaskUpdated: () => void;
 }
@@ -46,23 +48,40 @@ export function EditTaskDialog({
   onOpenChange,
   task,
   managers,
+  projects,
   isOptionsLoading,
   onTaskUpdated,
 }: EditTaskDialogProps) {
   const { t } = useLanguage();
-  const [formData, setFormData] = useState<UpdateTaskRequest>({
+  const [formData, setFormData] = useState<
+    UpdateTaskRequest & { projectId?: string }
+  >({
     title: "",
     description: "",
     points: 0,
     priority: "MEDIUM",
     dueDate: "",
+    projectId: "", // Add projectId
     assigneeIds: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [managerSearch, setManagerSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState(""); // Add projectSearch
   const [showManagerDropdown, setShowManagerDropdown] = useState(false);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false); // Add showProjectDropdown
   const [selectedManagers, setSelectedManagers] = useState<Manager[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null); // Add selectedProject
+  const [assignableUsers, setAssignableUsers] = useState<Manager[]>(managers);
   const [error, setError] = useState<string | null>(null);
+
+  const managerDropdownRef = useRef<HTMLDivElement>(null);
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync assignableUsers with managers prop if managers load later or change
+  // and we haven't searched yet (to maintain initial list)
+  if (assignableUsers.length === 0 && managers.length > 0 && !managerSearch) {
+    setAssignableUsers(managers);
+  }
 
   useEffect(() => {
     if (task) {
@@ -72,6 +91,7 @@ export function EditTaskDialog({
         points: task.points,
         priority: task.priority,
         dueDate: task.dueDate,
+        projectId: task.project?.id || task.projectId || "", // Init projectId
         assigneeIds: task.assigneeIds || [],
       });
 
@@ -82,8 +102,47 @@ export function EditTaskDialog({
       } else {
         setSelectedManagers([]);
       }
+
+      // Init selected project
+      if (task.project) {
+        setSelectedProject({
+          id: task.project.id,
+          name: task.project.name,
+        } as Project);
+        setProjectSearch(task.project.name);
+      } else if (task.projectId) {
+        // Best effort if we have ID but not object, try to find in projects prop
+        const found = projects.find((p) => p.id === task.projectId);
+        if (found) {
+          setSelectedProject(found);
+          setProjectSearch(found.name);
+        }
+      }
     }
-  }, [task]);
+  }, [task, projects]);
+
+  // Click outside logic
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        managerDropdownRef.current &&
+        !managerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowManagerDropdown(false);
+      }
+      if (
+        projectDropdownRef.current &&
+        !projectDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProjectDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleUpdateTask = async () => {
     if (!task) return;
@@ -205,46 +264,145 @@ export function EditTaskDialog({
           </div>
 
           <div className="space-y-2">
+            <div className="space-y-2">
+              <div
+                className="relative flex flex-col gap-2"
+                ref={projectDropdownRef}
+              >
+                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t.project}
+                </Label>
+                <Input
+                  placeholder={t.search}
+                  value={projectSearch}
+                  onChange={(e) => {
+                    setProjectSearch(e.target.value);
+                    setShowProjectDropdown(true);
+                  }}
+                  onFocus={() => setShowProjectDropdown(true)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl"
+                />
+                {showProjectDropdown && projects.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl shadow-lg max-h-[200px] overflow-auto animate-in fade-in zoom-in-95 duration-200">
+                    {projects
+                      .filter((project) => {
+                        if (!projectSearch) return true;
+                        const query = projectSearch.toLowerCase();
+                        return project.name.toLowerCase().includes(query);
+                      })
+                      .map((project) => (
+                        <div
+                          key={project.id}
+                          className="px-3 py-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-b border-slate-50 last:border-0"
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setFormData({
+                              ...formData,
+                              projectId: project.id,
+                            });
+                            setProjectSearch(project.name);
+                            setShowProjectDropdown(false);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
+                              {project.name}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {(project as any).description || "No description"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Assign Users
               {isOptionsLoading && (
                 <Loader2 className="ml-2 h-3 w-3 animate-spin inline" />
               )}
             </Label>
-            <div className="relative">
+            <div className="relative" ref={managerDropdownRef}>
               <Input
                 placeholder={
                   isOptionsLoading ? "Loading..." : "Search Assignee"
                 }
                 value={managerSearch}
                 disabled={isOptionsLoading}
-                onChange={(e) => {
-                  setManagerSearch(e.target.value);
+                onChange={async (e) => {
+                  const value = e.target.value;
+                  setManagerSearch(value);
                   setShowManagerDropdown(true);
+
+                  // Fetch users dynamically
+                  const match = document.cookie.match(
+                    new RegExp("(^| )accessToken=([^;]+)")
+                  );
+                  const token = match ? match[2] : null;
+
+                  if (token) {
+                    try {
+                      let organizationId = "";
+                      const userDataStr = localStorage.getItem("user_data");
+                      if (userDataStr) {
+                        const userData = JSON.parse(userDataStr);
+                        organizationId =
+                          userData.user?.organizationId ||
+                          userData.organizations?.[0]?.id ||
+                          userData.data?.organizations?.[0]?.id ||
+                          "";
+                      }
+
+                      if (organizationId) {
+                        const { organizationApi } = await import(
+                          "@/lib/organization-api"
+                        );
+                        const response =
+                          await organizationApi.getOrganizationUsers(
+                            token,
+                            organizationId,
+                            1,
+                            20,
+                            value
+                          );
+
+                        if (response.success && response.data?.users) {
+                          const users = response.data.users.map((u: any) => ({
+                            id: u.user ? u.user.id : u.id,
+                            fullName: u.user ? u.user.fullName : u.fullName,
+                            email: u.user ? u.user.email : u.email,
+                          }));
+                          setAssignableUsers(users);
+                        }
+                      }
+                    } catch (err) {
+                      console.error("Failed to search users", err);
+                    }
+                  }
                 }}
                 onFocus={() => setShowManagerDropdown(true)}
                 className="w-full bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl"
               />
-              {showManagerDropdown && managers.length > 0 && (
+              {showManagerDropdown && assignableUsers.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl shadow-lg max-h-[200px] overflow-auto animate-in fade-in zoom-in-95 duration-200">
-                  {managers
-                    .filter((manager) => {
+                  {assignableUsers
+                    .filter((user) => {
                       if (!managerSearch) return true;
                       const query = managerSearch.toLowerCase();
                       return (
-                        manager.fullName.toLowerCase().includes(query) ||
-                        manager.email.toLowerCase().includes(query)
+                        user.fullName.toLowerCase().includes(query) ||
+                        user.email.toLowerCase().includes(query)
                       );
                     })
-                    .map((manager) => (
+                    .map((user) => (
                       <div
-                        key={manager.id}
+                        key={user.id}
                         className="px-3 py-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-b border-slate-50 last:border-0"
                         onClick={() => {
-                          if (
-                            !selectedManagers.find((m) => m.id === manager.id)
-                          ) {
-                            const newManagers = [...selectedManagers, manager];
+                          if (!selectedManagers.find((m) => m.id === user.id)) {
+                            const newManagers = [...selectedManagers, user];
                             setSelectedManagers(newManagers);
                           }
                           setManagerSearch("");
@@ -253,10 +411,10 @@ export function EditTaskDialog({
                       >
                         <div className="flex flex-col">
                           <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
-                            {manager.fullName}
+                            {user.fullName}
                           </span>
                           <span className="text-xs text-slate-400">
-                            {manager.email}
+                            {user.email}
                           </span>
                         </div>
                       </div>

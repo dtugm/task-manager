@@ -118,19 +118,6 @@ export function ExecutiveTaskCard({
     if (taskItem.status === "ACCEPTED") return null;
 
     // Buttons JSX
-    const AskButton = () => (
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 text-xs border-amber-500 text-amber-600 hover:bg-amber-50"
-        onClick={(e) => {
-          e.stopPropagation();
-          openActionDialog("ask_approval", taskItem.id, taskItem.title);
-        }}
-      >
-        {t.askApproval}
-      </Button>
-    );
 
     const ApproveButton = () => (
       <Button
@@ -163,42 +150,22 @@ export function ExecutiveTaskCard({
     // 1. PENDING_APPROVAL -> Show ONLY Approve and Reject
     if (taskItem.status === "PENDING_APPROVAL") {
       if (
-        (userRole === "Supervisor" && isChild) ||
-        (userRole === "Manager" && isChild) ||
-        (userRole === "Executive" && isChild)
-      ) {
-        return (
-          <div className="flex gap-1 mt-2 justify-end">
-            <ApproveButton />
-            <RejectButton />
-          </div>
-        );
-      }
-    }
-
-    if (taskItem.progress === 100) {
-      if (userRole === "Executive") {
-        return (
-          <div className="flex gap-1 mt-2 justify-end">
-            <ApproveButton />
-            <RejectButton />
-          </div>
-        );
-      }
-
-      if (
+        userRole === "Executive" ||
         (userRole === "Supervisor" && isChild) ||
         (userRole === "Manager" && isChild)
       ) {
         return (
           <div className="flex gap-1 mt-2 justify-end">
-            <AskButton />
             <ApproveButton />
             <RejectButton />
           </div>
         );
       }
     }
+
+    // 2. Remove logic for progress === 100.
+    // User explicitly requested NOT to show buttons when "still completed" (progress 100),
+    // only when status is PENDING_APPROVAL.
 
     return null;
   };

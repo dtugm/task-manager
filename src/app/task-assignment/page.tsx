@@ -12,7 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, Loader2, Plus, Trash2, Search } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  Plus,
+  Trash2,
+  Search,
+  RefreshCw,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -406,6 +413,17 @@ export default function TaskAssignmentPage() {
 
           <div className="flex gap-3">
             <Button
+              variant="outline"
+              size="icon"
+              onClick={fetchTasks}
+              className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+              title={t.refresh}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <Button
               variant={deleteMode ? "destructive" : "outline"}
               onClick={() => setDeleteMode(!deleteMode)}
               className={
@@ -598,6 +616,7 @@ export default function TaskAssignmentPage() {
         onOpenChange={setIsEditOpen}
         task={editingTask}
         managers={managers}
+        projects={projects}
         isOptionsLoading={isOptionsLoading}
         onTaskUpdated={() => fetchTasks()}
       />

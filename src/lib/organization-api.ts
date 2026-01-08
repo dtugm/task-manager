@@ -128,17 +128,19 @@ export const organizationApi = {
     token: string,
     id: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    search?: string
   ): Promise<ApiResponse<OrganizationUsersResponse>> => {
-    return fetcher<ApiResponse<OrganizationUsersResponse>>(
-      `/organizations/${id}/users?page=${page}&limit=${limit}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    let url = `/organizations/${id}/users?page=${page}&limit=${limit}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    return fetcher<ApiResponse<OrganizationUsersResponse>>(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   },
 
   addOrganizationUser: async (

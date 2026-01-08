@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, Loader2, ListTodo } from "lucide-react";
+import { Trash2, Loader2, ListTodo, RefreshCw, Plus } from "lucide-react";
 import { useState, useMemo } from "react";
-import { CreateTaskModal } from "@/components/tasks/CreateTaskByManager";
+import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
@@ -32,6 +32,7 @@ export default function TaskManagerForManagerPage() {
 
   // Local UI State
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -171,18 +172,32 @@ export default function TaskManagerForManagerPage() {
               {t.taskManagerDesc}
             </p>
           </div>
-          <Button
-            variant={deleteMode ? "destructive" : "outline"}
-            onClick={() => setDeleteMode(!deleteMode)}
-            className={
-              !deleteMode
-                ? "bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 text-rose-500 hover:text-rose-600 rounded-xl"
-                : "rounded-xl"
-            }
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {deleteMode ? t.cancel : t.delete}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={fetchTasks}
+              className="bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 rounded-xl"
+              title={t.refresh}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <Button
+              variant={deleteMode ? "destructive" : "outline"}
+              onClick={() => setDeleteMode(!deleteMode)}
+              className={
+                !deleteMode
+                  ? "bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 text-rose-500 hover:text-rose-600 rounded-xl"
+                  : "rounded-xl"
+              }
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deleteMode ? t.cancel : t.delete}
+            </Button>
+          </div>
         </div>
 
         {/* SECTION 1: Tasks from Executives */}
@@ -191,7 +206,21 @@ export default function TaskManagerForManagerPage() {
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 pl-3 border-l-4 border-indigo-500">
               {t.tasksFromExecutives}
             </h3>
-            <CreateTaskModal userRole="Manager" onTaskCreated={fetchTasks} />
+            <Button
+              onClick={() => setIsCreateOpen(true)}
+              className="bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t.createTask}
+            </Button>
+            <CreateTaskDialog
+              open={isCreateOpen}
+              onOpenChange={setIsCreateOpen}
+              projects={projects}
+              managers={supervisors}
+              isOptionsLoading={isSupervisorsLoading}
+              onTaskCreated={() => fetchTasks()}
+            />
           </div>
 
           {/* Stats Grid */}
@@ -266,6 +295,7 @@ export default function TaskManagerForManagerPage() {
             }}
             task={editingTask}
             managers={supervisors}
+            projects={projects}
             isOptionsLoading={isSupervisorsLoading}
             onTaskUpdated={fetchTasks}
           />

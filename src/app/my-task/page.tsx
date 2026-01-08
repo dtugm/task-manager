@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useLanguage } from "@/contexts/language-context";
 import { Task } from "@/types/task";
-import { Loader2, CheckSquare } from "lucide-react";
+import { Loader2, CheckSquare, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { useMyTasks } from "@/hooks/useMyTasks";
@@ -96,14 +97,28 @@ export default function MyTasksPage() {
 
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Page Header */}
-        <div className="border-b border-white/20 pb-6">
-          <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-300 dark:to-blue-300 flex items-center gap-3">
-            <CheckSquare className="h-8 w-8 text-indigo-500" />
-            {t.myTasksTitle}
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            {t.myTasksDesc}
-          </p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/20 pb-6">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-300 dark:to-blue-300 flex items-center gap-3">
+              <CheckSquare className="h-8 w-8 text-indigo-500" />
+              {t.myTasksTitle}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              {t.myTasksDesc}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={fetchTasks}
+            className="bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 rounded-xl"
+            title={t.refresh}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+          </Button>
         </div>
 
         <section className="space-y-6">

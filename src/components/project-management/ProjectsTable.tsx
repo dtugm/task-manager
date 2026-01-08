@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Folder, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Eye, Folder, Loader2, Pencil, Trash2, UsersRound } from "lucide-react";
 import { Project } from "@/types/project";
 import { useLanguage } from "@/contexts/language-context";
 
@@ -27,6 +30,7 @@ export function ProjectsTable({
   onDelete,
 }: ProjectsTableProps) {
   const { t } = useLanguage();
+  const router = useRouter();
 
   return (
     <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-black/40 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md overflow-hidden rounded-2xl ring-1 ring-white/50 dark:ring-white/5">
@@ -78,7 +82,10 @@ export function ProjectsTable({
               projects.map((project) => (
                 <TableRow
                   key={project.id}
-                  className="group hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0"
+                  className="group hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 cursor-pointer"
+                  onClick={() =>
+                    router.push(`/project-management/${project.id}/tasks`)
+                  }
                 >
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-3">
@@ -96,7 +103,7 @@ export function ProjectsTable({
                   <TableCell>
                     <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
                       <span className="text-lg text-[#0C426A] dark:text-slate-200">
-                        0
+                        {project.relatedTask || 0}
                       </span>
                       <span className="text-xs uppercase tracking-wide opacity-70">
                         Tasks
@@ -116,18 +123,22 @@ export function ProjectsTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          (window.location.href = `/project-management/${project.id}/members`)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/project-management/${project.id}/members`;
+                        }}
                         className="h-9 w-9 text-[#0C426A]/60 hover:text-[#0C426A] hover:bg-[#0077FF]/10 dark:text-slate-400 dark:hover:text-[#0077FF] dark:hover:bg-[#0077FF]/20 rounded-xl transition-all"
                         title="View Members"
                       >
-                        <Eye className="h-4 w-4" />
+                        <UsersRound className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onEdit(project)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(project);
+                        }}
                         className="h-9 w-9 text-[#0077FF]/60 hover:text-[#0077FF] hover:bg-[#0077FF]/10 dark:text-slate-400 dark:hover:text-[#0077FF] dark:hover:bg-[#0077FF]/20 rounded-xl transition-all"
                       >
                         <Pencil className="h-4 w-4" />
@@ -135,7 +146,10 @@ export function ProjectsTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onDelete(project.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(project.id);
+                        }}
                         className="h-9 w-9 text-[#F1677C]/60 hover:text-[#F1677C] hover:bg-[#F1677C]/10 dark:text-slate-400 dark:hover:text-[#F1677C] dark:hover:bg-[#F1677C]/20 rounded-xl transition-all"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -37,7 +37,8 @@ export const taskApi = {
     limit: number = 20,
     assigneeId?: string,
     creatorId?: string,
-    search?: string
+    search?: string,
+    projectId?: string
   ): Promise<TasksResponse> => {
     let url = `/tasks?page=${page}&limit=${limit}`;
     if (assigneeId) {
@@ -49,7 +50,24 @@ export const taskApi = {
     if (search) {
       url += `&title=${encodeURIComponent(search)}`;
     }
+    if (projectId) {
+      url += `&projectId=${projectId}`;
+    }
     return fetcher<TasksResponse>(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  getProjectTasks: async (
+    token: string,
+    projectId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<TasksResponse> => {
+    return fetcher<TasksResponse>(`/tasks/projects/${projectId}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,

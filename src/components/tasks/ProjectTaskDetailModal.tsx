@@ -1,59 +1,38 @@
 "use client";
 
 import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types/task";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Send, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 import { taskApi } from "@/lib/task-api";
 import { useLanguage } from "@/contexts/language-context";
 
-// Simple toast fallback if not available
-const showToast = (message: string, type: "success" | "error" = "success") => {
-  // Check if toast exists in window or context, otherwise console
-  console.log(`[${type.toUpperCase()}] ${message}`);
-};
-// Actually, let's just use console or simple state feedback for now as I don't see sonner setup explicitly in my context (though it's common).
-// I'll assume basic feedback.
-
-interface TaskDetailModalProps {
+interface ProjectTaskDetailModalProps {
   task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: () => void;
 }
 
-export function TaskDetailModal({
+export function ProjectTaskDetailModal({
   task,
   isOpen,
   onClose,
-  onUpdate,
-}: TaskDetailModalProps) {
+}: ProjectTaskDetailModalProps) {
   const { t } = useLanguage();
-  const [progress, setProgress] = useState(0);
-  const [comment, setComment] = useState("");
-  const [isSavingProgress, setIsSavingProgress] = useState(false);
-  const [isSendingComment, setIsSendingComment] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize progress when task changes
+  // Initialize and fetch logs when task changes or modal opens
   useEffect(() => {
-    if (task) {
-      setProgress(task.progress || 0);
-      setComment("");
-    }
     if (task && isOpen) {
       fetchLogs();
     }
@@ -89,67 +68,6 @@ export function TaskDetailModal({
 
   if (!task) return null;
 
-  const handleSaveProgress = async () => {
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-    if (!token) return;
-
-    setIsSavingProgress(true);
-    try {
-      // Determine status based on progress
-      let status = "PENDING";
-      if (progress === 100) status = "COMPLETED";
-      else if (progress > 0) status = "IN_PROGRESS";
-
-      // 1. Update progress
-      const progressPromise = taskApi.updateTask(token, task.id, {
-        progress,
-      });
-
-      // 2. Update status if needed (we'll always send it to be safe/consistent with logic)
-      const statusPromise = taskApi.updateStatus(token, task.id, status);
-
-      // Wait for both
-      const [progressResponse, statusResponse] = await Promise.all([
-        progressPromise,
-        statusPromise,
-      ]);
-
-      if (progressResponse.success && statusResponse.success) {
-        onUpdate();
-        showToast(t.progressUpdated);
-      }
-    } catch (err) {
-      console.error("Failed to update progress/status", err);
-    } finally {
-      setIsSavingProgress(false);
-    }
-  };
-
-  const handleSendComment = async () => {
-    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
-    const token = match ? match[2] : null;
-    if (!token || !comment.trim()) return;
-
-    setIsSendingComment(true);
-    try {
-      const response = await taskApi.addComment(token, task.id, {
-        comment: comment.trim(),
-      });
-
-      if (response.success) {
-        setComment("");
-        showToast(t.commentAdded);
-        fetchLogs();
-        // Maybe onUpdate to refresh? Comments might strictly not need it unless we show them.
-      }
-    } catch (err) {
-      console.error("Failed to send comment", err);
-    } finally {
-      setIsSendingComment(false);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
@@ -157,7 +75,6 @@ export function TaskDetailModal({
           <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             {t.description}
           </DialogTitle>
-          {/* Close button is automatic in DialogContent usually via X icon */}
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -225,57 +142,8 @@ export function TaskDetailModal({
             )}
           </div>
 
-          {/* Update Progress Section */}
-          <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-6 space-y-4 border border-blue-100 dark:border-blue-900/20">
-            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-bold">
-              <TrendingUpIcon className="h-4 w-4" />
-              {t.updateProgress}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">
-                  {t.slideToSetProgress}
-                </span>
-                <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                  {progress}%
-                </span>
-              </div>
-
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={progress}
-                onChange={(e) => setProgress(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                style={{
-                  background: `linear-gradient(to right, #2563eb ${progress}%, #e2e8f0 ${progress}%)`,
-                }}
-              />
-            </div>
-
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all font-medium"
-              onClick={handleSaveProgress}
-              disabled={isSavingProgress}
-            >
-              {isSavingProgress ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t.save}...
-                </>
-              ) : (
-                <>
-                  <TrendingUpIcon className="mr-2 h-4 w-4" />
-                  {t.saveProgress}
-                </>
-              )}
-            </Button>
-          </div>
-
           {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
               <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
                 {t.assignedBy}
@@ -287,6 +155,29 @@ export function TaskDetailModal({
                 <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
                   {task.creator?.fullName || "Admin"}
                 </span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                Assigned To
+              </Label>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {task.assignees && task.assignees.length > 0 ? (
+                  task.assignees.map((assignee, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shadow-sm border border-blue-200 dark:border-blue-800/30">
+                        {getInitials(assignee.assignee.fullName)}
+                      </div>
+                      <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
+                        {assignee.assignee.fullName}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500 italic">
+                    Unassigned
+                  </span>
+                )}
               </div>
             </div>
             <div>
@@ -457,62 +348,9 @@ export function TaskDetailModal({
               )}
             </div>
           </div>
-
-          {/* Add Response Section */}
-          <div className="space-y-3 pt-2">
-            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              {t.addComment}
-            </Label>
-            <div className="relative">
-              <Textarea
-                placeholder={t.writeComment}
-                className="min-h-[100px] resize-none pr-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-            </div>
-            <Button
-              className="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium shadow-lg shadow-slate-900/10"
-              onClick={handleSendComment}
-              disabled={isSendingComment || !comment.trim()}
-            >
-              {isSendingComment ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t.sending}
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  {t.sendComment}
-                </>
-              )}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Helper icons and utils
-function TrendingUpIcon(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
   );
 }
 

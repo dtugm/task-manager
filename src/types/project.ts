@@ -7,6 +7,7 @@ export interface Project {
   updatedAt: string;
   deletedAt: string;
   organization: Organization;
+  relatedTask?: number;
 }
 
 export interface ProjectUser {

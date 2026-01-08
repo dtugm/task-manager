@@ -187,7 +187,7 @@ type Translations = {
   enterTaskDesc: string;
   points: string;
   dueDate: string;
-  assignToSupervisors: string;
+  assignTo: string;
   assignToEmployees: string;
   typeToSearchSupervisors: string;
   typeToSearchEmployees: string;
@@ -425,7 +425,7 @@ const translations: Record<Language, Translations> = {
     enterTaskDesc: "Enter task description",
     points: "Points",
     dueDate: "Due Date",
-    assignToSupervisors: "Assign to Supervisors",
+    assignTo: "Assign to ",
     assignToEmployees: "Assign to Employees",
     typeToSearchSupervisors: "Type to search supervisors...",
     typeToSearchEmployees: "Type to search employees...",
@@ -663,7 +663,7 @@ const translations: Record<Language, Translations> = {
     enterTaskDesc: "Masukkan deskripsi tugas",
     points: "Poin",
     dueDate: "Tenggat Waktu",
-    assignToSupervisors: "Tugaskan ke Supervisor",
+    assignTo: "Tugaskan ke",
     assignToEmployees: "Tugaskan ke Karyawan",
     typeToSearchSupervisors: "Ketik untuk mencari supervisor...",
     typeToSearchEmployees: "Ketik untuk mencari karyawan...",
