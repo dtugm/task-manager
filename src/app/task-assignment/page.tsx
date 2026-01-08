@@ -514,7 +514,7 @@ export default function TaskAssignmentPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
             {filteredTasks.map((task) => (
               <ExecutiveTaskCard
                 key={task.id}
