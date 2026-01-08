@@ -8,13 +8,19 @@ import {
   UserContext,
 } from "@/types/auth";
 
+// ... imports
+
 const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
 
 async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
+
+  if (process.env.NEXT_PUBLIC_REGISTER_APIKEY) {
+    headers["x-api-key"] = process.env.NEXT_PUBLIC_REGISTER_APIKEY;
+  }
 
   const response = await fetch(`${BASE_URL}${url}`, {
     ...options,

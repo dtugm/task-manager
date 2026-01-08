@@ -18,36 +18,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { CreateTaskRequest } from "@/types/task";
-import { Project } from "@/types/project";
+import { CreateTaskRequest, Task } from "@/types/task";
 import { taskApi } from "@/lib/task-api";
 import { useLanguage } from "@/contexts/language-context";
 
-interface Manager {
+interface Assignee {
   id: string;
   fullName: string;
   email: string;
 }
 
-interface CreateTaskDialogProps {
+interface CreateSubtaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projects: Project[];
-  managers: Manager[];
-  isOptionsLoading: boolean;
+  parentTask: Task;
+  assignees: Assignee[];
+  isOptionsLoading?: boolean;
   onTaskCreated: () => void;
 }
 
-export function CreateTaskDialog({
+export function CreateSubtaskDialog({
   open,
   onOpenChange,
-  projects,
-  managers,
-  isOptionsLoading,
+  parentTask,
+  assignees,
+  isOptionsLoading = false,
   onTaskCreated,
-}: CreateTaskDialogProps) {
+}: CreateSubtaskDialogProps) {
   const { t } = useLanguage();
   const [formData, setFormData] = useState<CreateTaskRequest>({
     title: "",
@@ -55,17 +54,19 @@ export function CreateTaskDialog({
     points: 0,
     priority: "MEDIUM",
     dueDate: "",
-    projectId: "",
+    projectId: parentTask.projectId || parentTask.project?.id || "",
     assigneeIds: [],
+    parentTaskId: parentTask.id,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [projectSearch, setProjectSearch] = useState("");
-  const [managerSearch, setManagerSearch] = useState("");
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
-  const [showManagerDropdown, setShowManagerDropdown] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedManagers, setSelectedManagers] = useState<Manager[]>([]);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const [selectedAssignees, setSelectedAssignees] = useState<Assignee[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync project ID if parent task changes (though dialog usually remounts or is keyed)
+  // We initialize in state, but good to be safe if parentTask prop updates while open?
+  // Probably fine for now.
 
   const resetForm = () => {
     setFormData({
@@ -74,15 +75,13 @@ export function CreateTaskDialog({
       points: 0,
       priority: "MEDIUM",
       dueDate: "",
-      projectId: "",
+      projectId: parentTask.projectId || parentTask.project?.id || "",
       assigneeIds: [],
+      parentTaskId: parentTask.id,
     });
-    setProjectSearch("");
-    setManagerSearch("");
-    setSelectedProject(null);
-    setSelectedManagers([]);
-    setShowProjectDropdown(false);
-    setShowManagerDropdown(false);
+    setAssigneeSearch("");
+    setSelectedAssignees([]);
+    setShowAssigneeDropdown(false);
     setError(null);
   };
 
@@ -90,6 +89,12 @@ export function CreateTaskDialog({
     const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
     const token = match ? match[2] : null;
     if (!token) return;
+
+    // Validate required fields
+    if (!formData.title || !formData.projectId) {
+      setError("Title and Project are required (Project should be inherited).");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -99,10 +104,10 @@ export function CreateTaskDialog({
         onOpenChange(false);
         resetForm();
       } else {
-        setError(response.error?.message || "Failed to create task");
+        setError(response.error?.message || "Failed to create subtask");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to create task");
+      setError(err.message || "Failed to create subtask");
     } finally {
       setIsSubmitting(false);
     }
@@ -112,8 +117,11 @@ export function CreateTaskDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
         <DialogHeader>
-          <DialogTitle>{t.createTask}</DialogTitle>
-          <DialogDescription>{t.taskAssignmentDesc}</DialogDescription>
+          <DialogTitle>Create Related Task</DialogTitle>
+          <DialogDescription>
+            Creating a subtask for:{" "}
+            <span className="font-semibold">{parentTask.title}</span>
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -123,7 +131,7 @@ export function CreateTaskDialog({
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
-              placeholder="Enter task title"
+              placeholder="Enter subtask title"
             />
           </div>
           <div className="space-y-2">
@@ -133,7 +141,7 @@ export function CreateTaskDialog({
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder={t.projectDescPlaceholder}
+              placeholder="Enter task description"
               rows={4}
             />
           </div>
@@ -149,7 +157,7 @@ export function CreateTaskDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>{t.filterByPriority.split(" ")[2]}</Label>
+              <Label>{t.filterByPriority.split(" ")[2] || "Priority"}</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(value: "LOW" | "MEDIUM" | "HIGH") =>
@@ -180,66 +188,8 @@ export function CreateTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <div className="relative flex flex-col gap-2">
-                <Label>{t.project}</Label>
-                <Input
-                  placeholder={t.search}
-                  value={projectSearch}
-                  onChange={(e) => {
-                    setProjectSearch(e.target.value);
-                    setShowProjectDropdown(true);
-                  }}
-                  onFocus={() => setShowProjectDropdown(true)}
-                  className="w-full"
-                />
-                {showProjectDropdown && projects.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-[200px] overflow-auto">
-                    {projects
-                      .filter((project) => {
-                        if (!projectSearch) return true;
-                        const query = projectSearch.toLowerCase();
-                        return project.name.toLowerCase().includes(query);
-                      })
-                      .map((project) => (
-                        <div
-                          key={project.id}
-                          className="px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setFormData({
-                              ...formData,
-                              projectId: project.id,
-                            });
-                            setProjectSearch(project.name);
-                            setShowProjectDropdown(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium">{project.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {(project as any).description || "No description"}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    <div className="border-t">
-                      <a
-                        href="/project-management"
-                        target="_blank"
-                        className="px-3 py-2 flex items-center gap-2 text-sm text-blue-600 hover:bg-accent transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                        {t.createNewProject}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
               <Label>
-                {t.assignToSupervisors || "Assign To"}
+                Assign To
                 {isOptionsLoading && (
                   <Loader2 className="ml-2 h-3 w-3 animate-spin inline" />
                 )}
@@ -249,54 +199,56 @@ export function CreateTaskDialog({
                   placeholder={
                     isOptionsLoading ? "Loading..." : "Search Assignee"
                   }
-                  value={managerSearch}
+                  value={assigneeSearch}
                   disabled={isOptionsLoading}
                   onChange={(e) => {
-                    setManagerSearch(e.target.value);
-                    setShowManagerDropdown(true);
+                    setAssigneeSearch(e.target.value);
+                    setShowAssigneeDropdown(true);
                   }}
-                  onFocus={() => setShowManagerDropdown(true)}
+                  onFocus={() => setShowAssigneeDropdown(true)}
                   className="w-full"
                 />
-                {showManagerDropdown && managers.length > 0 && (
+                {showAssigneeDropdown && assignees.length > 0 && (
                   <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-[200px] overflow-auto">
-                    {managers
-                      .filter((manager) => {
-                        if (!managerSearch) return true;
-                        const query = managerSearch.toLowerCase();
+                    {assignees
+                      .filter((assignee) => {
+                        if (!assigneeSearch) return true;
+                        const query = assigneeSearch.toLowerCase();
                         return (
-                          manager.fullName.toLowerCase().includes(query) ||
-                          manager.email.toLowerCase().includes(query)
+                          assignee.fullName.toLowerCase().includes(query) ||
+                          assignee.email.toLowerCase().includes(query)
                         );
                       })
-                      .map((manager) => (
+                      .map((assignee) => (
                         <div
-                          key={manager.id}
+                          key={assignee.id}
                           className="px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
                           onClick={() => {
                             if (
-                              !selectedManagers.find((m) => m.id === manager.id)
+                              !selectedAssignees.find(
+                                (m) => m.id === assignee.id
+                              )
                             ) {
-                              const newManagers = [
-                                ...selectedManagers,
-                                manager,
+                              const newAssignees = [
+                                ...selectedAssignees,
+                                assignee,
                               ];
-                              setSelectedManagers(newManagers);
+                              setSelectedAssignees(newAssignees);
                               setFormData({
                                 ...formData,
-                                assigneeIds: newManagers.map((m) => m.id),
+                                assigneeIds: newAssignees.map((m) => m.id),
                               });
                             }
-                            setManagerSearch("");
-                            setShowManagerDropdown(false);
+                            setAssigneeSearch("");
+                            setShowAssigneeDropdown(false);
                           }}
                         >
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {manager.fullName}
+                              {assignee.fullName}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {manager.email}
+                              {assignee.email}
                             </span>
                           </div>
                         </div>
@@ -304,24 +256,24 @@ export function CreateTaskDialog({
                   </div>
                 )}
               </div>
-              {selectedManagers.length > 0 && (
+              {selectedAssignees.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedManagers.map((manager) => (
+                  {selectedAssignees.map((assignee) => (
                     <Badge
-                      key={manager.id}
+                      key={assignee.id}
                       variant="secondary"
                       className="flex items-center gap-1"
                     >
-                      {manager.fullName}
+                      {assignee.fullName}
                       <button
                         onClick={() => {
-                          const newManagers = selectedManagers.filter(
-                            (m) => m.id !== manager.id
+                          const newAssignees = selectedAssignees.filter(
+                            (m) => m.id !== assignee.id
                           );
-                          setSelectedManagers(newManagers);
+                          setSelectedAssignees(newAssignees);
                           setFormData({
                             ...formData,
-                            assigneeIds: newManagers.map((m) => m.id),
+                            assigneeIds: newAssignees.map((m) => m.id),
                           });
                         }}
                         className="ml-1 hover:text-destructive"

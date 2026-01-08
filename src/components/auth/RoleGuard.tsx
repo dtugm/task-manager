@@ -33,12 +33,20 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Unassigned Role Restriction
+    if (userRole === "Unassigned") {
+      if (pathname !== "/waiting-approval") {
+        router.replace("/waiting-approval");
+      }
+      return;
+    }
+
     // Super Admin has full access
     if (userRole === "Super Admin") {
       return;
     }
 
-    // Dashboard (/) is always allowed for logged-in users
+    // Dashboard (/) is always allowed for logged-in users (except Unassigned)
     if (pathname === "/") {
       return;
     }
@@ -57,6 +65,10 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
       router.push("/"); // Redirect to dashboard
     }
   }, [userRole, isLoading, pathname, router]);
+
+  if (userRole === "Unassigned" && pathname !== "/waiting-approval") {
+    return null;
+  }
 
   if (isLoading) {
     return (

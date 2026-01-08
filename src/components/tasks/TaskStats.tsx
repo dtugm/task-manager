@@ -27,7 +27,7 @@ export function TaskStats({ stats }: TaskStatsProps) {
 
       <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-4 shadow-lg shadow-green-500/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
-          <span className="text-sm font-medium opacity-90">{t.completed}</span>
+          <span className="text-sm font-medium opacity-90">Accepted</span>
           <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
             <CheckCircle2 className="h-4 w-4 text-white" />
           </div>
@@ -47,7 +47,9 @@ export function TaskStats({ stats }: TaskStatsProps) {
 
       <div className="bg-gradient-to-br from-[#FFB200] to-[#DF9200] text-white rounded-2xl p-4 shadow-lg shadow-[#FFB200]/25 h-32 flex flex-col justify-between group hover:scale-[1.02] transition-all duration-300">
         <div className="flex justify-between items-start">
-          <span className="text-sm font-medium opacity-90">{t.todo}</span>
+          <span className="text-sm font-medium opacity-90">
+            Pending Approval
+          </span>
           <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
             <Clock className="h-4 w-4 text-white" />
           </div>

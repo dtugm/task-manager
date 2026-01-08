@@ -38,12 +38,15 @@ export function useManagerTasks() {
     try {
       let userId = currentUserId;
       if (!userId) {
+        // 1. Try Local Storage
         const storedUserStr = localStorage.getItem("user_data");
         if (storedUserStr) {
           try {
             const storedUser = JSON.parse(storedUserStr);
-            if (storedUser && storedUser.id) {
-              userId = storedUser.id;
+            // Handle { user: { id: ... } } (UserContext) OR { id: ... } (User)
+            userId = storedUser.user?.id || storedUser.id;
+
+            if (userId) {
               setCurrentUserId(userId);
             }
           } catch (e) {
@@ -51,11 +54,17 @@ export function useManagerTasks() {
           }
         }
 
+        // 2. Try API if still missing
         if (!userId) {
           const userResponse = await authApi.getCurrentUser(token);
           if (userResponse.success && userResponse.data) {
-            userId = userResponse.data.id;
-            setCurrentUserId(userId);
+            // endpoint /users/me returns UserContext { user: User, ... }
+            const userData = userResponse.data as any;
+            userId = userData.user?.id || userData.id;
+
+            if (userId) {
+              setCurrentUserId(userId);
+            }
           }
         }
       }
@@ -65,26 +74,48 @@ export function useManagerTasks() {
         const fetchedTasks = response.data.tasks;
         const taskMap = new Map(fetchedTasks.map((t) => [t.id, t]));
 
-        const parentTasks = fetchedTasks.filter((t) => t.parentTask === null);
-
-        const enrichedParentTasks = parentTasks.map((parent) => {
-          if (!parent.childTasks || parent.childTasks.length === 0) {
-            return parent;
+        // Hydrate children
+        const allTasksHydrated = fetchedTasks.map((task) => {
+          if (!task.childTasks || task.childTasks.length === 0) {
+            return task;
           }
-
-          const enrichedChildren = parent.childTasks.map((childSummary) => {
+          const enrichedChildren = task.childTasks.map((childSummary) => {
             const fullChild = taskMap.get(childSummary.id);
             return fullChild || childSummary;
           });
+          return { ...task, childTasks: enrichedChildren };
+        });
 
-          return {
-            ...parent,
-            childTasks: enrichedChildren,
-          };
+        // 3. Filter Relevant Tasks
+        const myRelevantTasksMap = new Map<string, Task>();
+
+        allTasksHydrated.forEach((t) => {
+          const isCreatedByMe =
+            t.creator?.id === userId || t.creatorId === userId;
+
+          const isAssignedToMe = t.assignees?.some(
+            (a) => a.assignee?.id === userId || (a as any).assigneeId === userId
+          );
+
+          // Only add if we have a userId to verify against
+          if (userId && (isCreatedByMe || isAssignedToMe)) {
+            myRelevantTasksMap.set(t.id, t);
+          }
+        });
+
+        const relevantTasksList = Array.from(myRelevantTasksMap.values());
+
+        // 4. View Logic: Top Level Tasks
+        // Show if (A) Root task OR (B) Parent is NOT relevant (e.g. assigned to Manager)
+        const topLevelRelevantTasks = relevantTasksList.filter((t) => {
+          if (!t.parentTask) return true;
+
+          const parentIsRelevant = myRelevantTasksMap.has(t.parentTask.id);
+          return !parentIsRelevant;
         });
 
         setAllTasks(fetchedTasks);
-        setExecutiveTasks(enrichedParentTasks);
+        setExecutiveTasks(topLevelRelevantTasks);
       }
     } catch (err) {
       console.error("Failed to fetch tasks", err);
@@ -178,7 +209,6 @@ export function useManagerTasks() {
   }, [fetchTasks, fetchProjects, fetchSupervisors]);
 
   return {
-    allTasks,
     executiveTasks,
     projects,
     supervisors,

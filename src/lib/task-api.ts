@@ -129,4 +129,44 @@ export const taskApi = {
       },
     });
   },
+
+  updateStatus: async (
+    token: string,
+    id: string,
+    status: string
+  ): Promise<ApiResponse<Task>> => {
+    return fetcher<ApiResponse<Task>>(`/tasks/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  approveTask: async (
+    token: string,
+    id: string
+  ): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>(`/tasks/${id}/approve`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  rejectTask: async (
+    token: string,
+    id: string,
+    reason: string
+  ): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>(`/tasks/${id}/reject`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+  },
 };

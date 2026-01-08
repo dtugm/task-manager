@@ -7,6 +7,7 @@ import {
   Tag,
   Folder,
   Settings,
+  Building2,
 } from "lucide-react";
 
 export const getNavigation = (t: any) => [
@@ -24,6 +25,11 @@ export const getNavigation = (t: any) => [
     name: t.projectMgmt,
     href: "/project-management",
     icon: Folder,
+  },
+  {
+    name: t.organizationMgmt,
+    href: "/organization-management",
+    icon: Building2,
   },
   {
     name: t.taskManagerMgr,
@@ -47,6 +53,7 @@ export const roleAccess: Record<string, string[]> = {
     "/my-task",
     "/attendance",
     "/attendance-log",
+    "/organization-management",
   ],
   Supervisor: [
     "/task-assignment",
@@ -56,5 +63,6 @@ export const roleAccess: Record<string, string[]> = {
     "/attendance-log",
   ],
   Employee: ["/my-task", "/attendance"],
+  Unassigned: ["/waiting-approval"],
   "Super Admin": ["*"],
 };

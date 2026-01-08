@@ -168,6 +168,13 @@ type Translations = {
   unknown: string;
   noTasksFromExecutivesEmpty: string;
 
+  // Approval Workflow
+  approveTask: string;
+  rejectTask: string;
+  askApproval: string;
+  processing: string;
+  confirm: string;
+
   // Filter keys
   fromDate: string;
   toDate: string;
@@ -220,6 +227,19 @@ type Translations = {
   removeMemberConfirmTitle: string;
   removeMemberConfirmDesc: string;
   rowsPerPage: string;
+  organizationMgmt: string;
+  createOrganization: string;
+  createOrgDesc: string;
+  manageUsers: string;
+  organizationName: string;
+  deleteOrganization: string;
+  confirmDeleteOrg: string;
+  confirmDeleteOrgDesc: string;
+  addUser: string;
+  addUserToOrg: string;
+  changeRole: string;
+  setActive: string;
+  isActive: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -386,6 +406,13 @@ const translations: Record<Language, Translations> = {
     unknown: "Unknown",
     noTasksFromExecutivesEmpty: "No tasks from executives yet.",
 
+    // Approval Workflow
+    approveTask: "Approve Task",
+    rejectTask: "Reject Task",
+    askApproval: "Ask Approval",
+    processing: "Processing...",
+    confirm: "Confirm",
+
     // Filter keys
     fromDate: "From Date",
     toDate: "To Date",
@@ -439,6 +466,20 @@ const translations: Record<Language, Translations> = {
     removeMemberConfirmDesc:
       "Are you sure you want to remove this member from the project?",
     rowsPerPage: "Rows per page:",
+    organizationMgmt: "Organization Management",
+    createOrganization: "Create Organization",
+    createOrgDesc: "Create a new organization and manage its members.",
+    manageUsers: "Manage Users",
+    organizationName: "Organization Name",
+    deleteOrganization: "Delete Organization",
+    confirmDeleteOrg: "Delete Organization?",
+    confirmDeleteOrgDesc:
+      "This action is permanent. All data related to this organization will be lost.",
+    addUser: "Add User",
+    addUserToOrg: "Add User to Organization",
+    changeRole: "Change Role",
+    setActive: "Set Active",
+    isActive: "Active",
   },
   id: {
     dashboard: "Dasbor",
@@ -603,6 +644,13 @@ const translations: Record<Language, Translations> = {
     unknown: "Tidak Diketahui",
     noTasksFromExecutivesEmpty: "Belum ada tugas dari eksekutif.",
 
+    // Approval Workflow
+    approveTask: "Setujui Tugas",
+    rejectTask: "Tolak Tugas",
+    askApproval: "Minta Persetujuan",
+    processing: "Memproses...",
+    confirm: "Konfirmasi",
+
     // Filter keys
     fromDate: "Dari Tanggal",
     toDate: "Sampai Tanggal",
@@ -656,6 +704,20 @@ const translations: Record<Language, Translations> = {
     removeMemberConfirmDesc:
       "Apakah Anda yakin ingin menghapus anggota ini dari proyek?",
     rowsPerPage: "Baris per halaman:",
+    organizationMgmt: "Manajemen Organisasi",
+    createOrganization: "Buat Organisasi",
+    createOrgDesc: "Buat organisasi baru dan kelola anggotanya.",
+    manageUsers: "Kelola Pengguna",
+    organizationName: "Nama Organisasi",
+    deleteOrganization: "Hapus Organisasi",
+    confirmDeleteOrg: "Hapus Organisasi?",
+    confirmDeleteOrgDesc:
+      "Penghapusan ini permanen. Semua data terkait organisasi ini akan hilang.",
+    addUser: "Tambah Pengguna",
+    addUserToOrg: "Tambah Pengguna ke Organisasi",
+    changeRole: "Ubah Peran",
+    setActive: "Set Aktif",
+    isActive: "Aktif",
   },
 };
 

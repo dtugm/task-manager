@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, ClipboardList } from "lucide-react";
 import { useState, useMemo } from "react";
 import { CreateTaskModal } from "@/components/tasks/CreateTaskSupervisor";
 import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
@@ -11,6 +10,7 @@ import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
 import { ExecutiveTaskStats } from "@/components/tasks/ExecutiveTaskStats";
 import { ManagerTaskFilters } from "@/components/tasks/ManagerTaskFilters";
 import { ExecutiveTaskCard } from "@/components/tasks/ExecutiveTaskCard";
+import { ManagerTaskCard } from "@/components/tasks/ManagerTaskCard";
 import { useLanguage } from "@/contexts/language-context";
 import { taskApi } from "@/lib/task-api";
 import { Task } from "@/types/task";
@@ -150,130 +150,147 @@ export default function TaskManagerForSupervisorPage() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Task Manager (Supervisor)
-          </h2>
-          <p className="text-muted-foreground">
-            Manage tasks and assign to employees
-          </p>
-        </div>
-        <Button
-          variant={deleteMode ? "destructive" : "outline"}
-          onClick={() => setDeleteMode(!deleteMode)}
-          className={
-            !deleteMode
-              ? "text-destructive border-destructive/20 hover:bg-destructive/10"
-              : ""
-          }
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          {deleteMode ? t.cancel : t.delete}
-        </Button>
+    <div className="relative isolate min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 animate-in fade-in-50 duration-500">
+      {/* Blobs Background */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob bg-purple-500/30 dark:bg-purple-500/20"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 bg-blue-500/30 dark:bg-blue-500/20"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000 bg-pink-500/30 dark:bg-pink-500/20"></div>
       </div>
 
-      {/* SECTION 1: Tasks */}
-      <section className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">{t.allTasks}</h3>
-          <CreateTaskModal userRole="Supervisor" onTaskCreated={fetchTasks} />
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/20 pb-6">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-300 dark:to-blue-300 flex items-center gap-3">
+              <ClipboardList className="h-8 w-8 text-indigo-500" />
+              Task Manager (Supervisor)
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              Manage tasks and assign to employees
+            </p>
+          </div>
+          <Button
+            variant={deleteMode ? "destructive" : "outline"}
+            onClick={() => setDeleteMode(!deleteMode)}
+            className={
+              !deleteMode
+                ? "bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 text-rose-500 hover:text-rose-600 rounded-xl"
+                : "rounded-xl"
+            }
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {deleteMode ? t.cancel : t.delete}
+          </Button>
         </div>
 
-        {/* Stats Grid */}
-        <ExecutiveTaskStats tasks={executiveTasks} />
+        {/* SECTION 1: Tasks */}
+        <section className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 pl-3 border-l-4 border-indigo-500">
+              {t.allTasks}
+            </h3>
+            <CreateTaskModal userRole="Supervisor" onTaskCreated={fetchTasks} />
+          </div>
 
-        {/* Filters */}
-        <ManagerTaskFilters
-          filterSearch={filterSearch}
-          setFilterSearch={setFilterSearch}
-          filterDateFrom={filterDateFrom}
-          setFilterDateFrom={setFilterDateFrom}
-          filterDateTo={filterDateTo}
-          setFilterDateTo={setFilterDateTo}
-          filterProject={filterProject}
-          setFilterProject={setFilterProject}
-          filterPriority={filterPriority}
-          setFilterPriority={setFilterPriority}
-          filterStatus={filterStatus}
-          setFilterStatus={setFilterStatus}
-          projects={projects}
-        />
+          {/* Stats Grid */}
+          <ExecutiveTaskStats tasks={executiveTasks} />
 
-        {/* Task List */}
-        {isLoading ? (
-          <Card>
-            <CardContent className="p-12 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </CardContent>
-          </Card>
-        ) : executiveTasks.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center text-muted-foreground">
-              {t.noTasksFromExecutivesEmpty}
-            </CardContent>
-          </Card>
-        ) : (
-          filteredTasks.map((task) => (
-            <ExecutiveTaskCard
-              key={task.id}
-              task={task}
-              expandedTasks={expandedTasks}
-              toggleExpand={toggleExpand}
-              onSelectTask={(t) => {
-                setSelectedTask(t);
-                setIsDetailOpen(true);
-              }}
-              onEditTask={(t) => {
-                setEditingTask(t);
-                setIsEditOpen(true);
-              }}
-              onDeleteTask={(id) => setTaskToDelete(id)}
-              fetchTasks={fetchTasks}
-              deleteMode={deleteMode}
-              targetRole="Employee"
-            />
-          ))
+          {/* Filters */}
+          <ManagerTaskFilters
+            filterSearch={filterSearch}
+            setFilterSearch={setFilterSearch}
+            filterDateFrom={filterDateFrom}
+            setFilterDateFrom={setFilterDateFrom}
+            filterDateTo={filterDateTo}
+            setFilterDateTo={setFilterDateTo}
+            filterProject={filterProject}
+            setFilterProject={setFilterProject}
+            filterPriority={filterPriority}
+            setFilterPriority={setFilterPriority}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            projects={projects}
+          />
+
+          {/* Task List */}
+          {isLoading ? (
+            <div className="bg-white/30 backdrop-blur-sm rounded-xl p-12 flex items-center justify-center border border-white/10">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            </div>
+          ) : executiveTasks.length === 0 ? (
+            <div className="bg-white/30 backdrop-blur-sm rounded-xl p-12 text-center border border-white/10">
+              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mx-auto flex items-center justify-center mb-4">
+                <ClipboardList className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-200">
+                No tasks found
+              </h3>
+              <p className="text-slate-500">{t.noTasksFromExecutivesEmpty}</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {filteredTasks.map((task) => (
+                <ManagerTaskCard
+                  key={task.id}
+                  task={task}
+                  expandedTasks={expandedTasks}
+                  toggleExpand={toggleExpand}
+                  onSelectTask={(t) => {
+                    setSelectedTask(t);
+                    setIsDetailOpen(true);
+                  }}
+                  onEditTask={(t) => {
+                    setEditingTask(t);
+                    setIsEditOpen(true);
+                  }}
+                  onDeleteTask={(id) => setTaskToDelete(id)}
+                  fetchTasks={fetchTasks}
+                  deleteMode={deleteMode}
+                  assignees={employees}
+                  userRole="Supervisor"
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Edit Task Dialog */}
+        {editingTask && (
+          <EditTaskDialog
+            open={isEditOpen}
+            onOpenChange={(open) => {
+              setIsEditOpen(open);
+              if (!open) setEditingTask(null);
+            }}
+            task={editingTask}
+            managers={employees as any} // Pass employees as managers (generic assignees)
+            isOptionsLoading={isEmployeesLoading}
+            onTaskUpdated={fetchTasks}
+          />
         )}
-      </section>
 
-      {/* Edit Task Dialog */}
-      {editingTask && (
-        <EditTaskDialog
-          open={isEditOpen}
-          onOpenChange={(open) => {
-            setIsEditOpen(open);
-            if (!open) setEditingTask(null);
-          }}
-          task={editingTask}
-          managers={employees as any} // Pass employees as managers (generic assignees)
-          isOptionsLoading={isEmployeesLoading}
-          onTaskUpdated={fetchTasks}
+        {/* Task Detail Modal */}
+        {selectedTask && (
+          <TaskDetailModal
+            isOpen={isDetailOpen}
+            onClose={() => {
+              setIsDetailOpen(false);
+              setSelectedTask(null);
+            }}
+            task={selectedTask}
+            onUpdate={fetchTasks}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <DeleteTaskDialog
+          open={!!taskToDelete}
+          onOpenChange={(open) => !open && setTaskToDelete(null)}
+          onConfirm={handleDeleteTask}
+          isSubmitting={isSubmitting}
         />
-      )}
-
-      {/* Task Detail Modal */}
-      {selectedTask && (
-        <TaskDetailModal
-          isOpen={isDetailOpen}
-          onClose={() => {
-            setIsDetailOpen(false);
-            setSelectedTask(null);
-          }}
-          task={selectedTask}
-          onUpdate={fetchTasks}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <DeleteTaskDialog
-        open={!!taskToDelete}
-        onOpenChange={(open) => !open && setTaskToDelete(null)}
-        onConfirm={handleDeleteTask}
-        isSubmitting={isSubmitting}
-      />
+      </div>
     </div>
   );
 }

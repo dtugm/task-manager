@@ -29,7 +29,7 @@ import { Project } from "@/types/project";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { TaskStats } from "@/components/tasks/TaskStats";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
-import { TaskCard } from "@/components/tasks/TaskCard";
+import { ExecutiveTaskCard } from "@/components/tasks/ExecutiveTaskCard";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
 import { useLanguage } from "@/contexts/language-context";
@@ -65,6 +65,17 @@ export default function TaskAssignmentPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
+  };
 
   // Task Detail
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -169,58 +180,101 @@ export default function TaskAssignmentPage() {
     }
   };
 
-  // Fetch managers
+  // Fetch managers and RnD members
   const fetchManagers = async () => {
     const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
     const token = match ? match[2] : null;
     if (!token) return;
 
     try {
-      const response = await authApi.getOrganizationUsers(
-        token,
-        ORGANIZATION_ID,
-        1,
-        100
-      );
+      const RND_PROJECT_ID = "sXeA6VyPZc7wSxgr2JkuC";
 
-      let rawData: any = response;
-      if (response && (response as any).success && (response as any).data) {
-        rawData = (response as any).data;
+      // Fetch both Organization Managers and RnD Project Users
+      const [managersResponse, rndResponse] = await Promise.all([
+        authApi.getOrganizationUsers(token, ORGANIZATION_ID, 1, 100),
+        projectApi.getProjectUsers(token, RND_PROJECT_ID, 1, 100),
+      ]);
+
+      const allUsersMap = new Map<string, Manager>();
+
+      // Process Managers
+      let managersData: any = managersResponse;
+      if (
+        managersResponse &&
+        (managersResponse as any).success &&
+        (managersResponse as any).data
+      ) {
+        managersData = (managersResponse as any).data;
       }
 
-      const mappedManagers: Manager[] = [];
-      let usersSource: any[] = [];
-
-      if (Array.isArray(rawData)) {
-        usersSource = rawData;
-      } else if (rawData && Array.isArray(rawData.data)) {
-        usersSource = rawData.data;
-      } else if (rawData && Array.isArray(rawData.users)) {
-        usersSource = rawData.users;
+      let managersSource: any[] = [];
+      if (Array.isArray(managersData)) {
+        managersSource = managersData;
+      } else if (managersData && Array.isArray(managersData.data)) {
+        managersSource = managersData.data;
+      } else if (managersData && Array.isArray(managersData.users)) {
+        managersSource = managersData.users;
       }
 
-      usersSource.forEach((item: any) => {
-        // Filter by role = Manager
+      managersSource.forEach((item: any) => {
         if (item.role === "Manager" || item.role === "MANAGER") {
-          if (item.user && item.user.id) {
-            mappedManagers.push({
-              id: item.user.id,
-              fullName: item.user.fullName || item.user.username || "Unknown",
-              email: item.user.email,
-            });
-          } else if (item.id && (item.fullName || item.username)) {
-            mappedManagers.push({
-              id: item.id,
-              fullName: item.fullName || item.username || "Unknown",
-              email: item.email,
-            });
+          const user = item.user || item; // Handle both wrapper and direct user object
+          if (user.id || item.id) {
+            const id = user.id || item.id;
+            const fullName =
+              user.fullName ||
+              user.username ||
+              item.fullName ||
+              item.username ||
+              "Unknown";
+            const email = user.email || item.email || "";
+            allUsersMap.set(id, { id, fullName, email });
           }
         }
       });
 
-      setManagers(mappedManagers);
+      // Process RnD Users
+      let rndData: any = rndResponse;
+      if (
+        rndResponse &&
+        (rndResponse as any).success &&
+        (rndResponse as any).data
+      ) {
+        rndData = (rndResponse as any).data;
+      }
+
+      let rndSource: any[] = [];
+      if (Array.isArray(rndData)) {
+        rndSource = rndData;
+      } else if (rndData && Array.isArray(rndData.data)) {
+        rndSource = rndData.data;
+      } else if (rndData && Array.isArray(rndData.users)) {
+        rndSource = rndData.users;
+      } else if (rndData && Array.isArray(rndData.projectUsers)) {
+        // Possible variation
+        rndSource = rndData.projectUsers;
+      }
+
+      rndSource.forEach((item: any) => {
+        // Identify user object structure
+        const user = item.user || item;
+        if (user.id || item.id) {
+          const id = user.id || item.id;
+          const fullName =
+            user.fullName ||
+            user.username ||
+            item.fullName ||
+            item.username ||
+            "Unknown";
+          const email = user.email || item.email || "";
+          // Add to map (overwrites if exists, which is fine)
+          allUsersMap.set(id, { id, fullName, email });
+        }
+      });
+
+      setManagers(Array.from(allUsersMap.values()));
     } catch (err) {
-      console.error("Failed to fetch managers", err);
+      console.error("Failed to fetch assignees", err);
     }
   };
 
@@ -311,9 +365,9 @@ export default function TaskAssignmentPage() {
 
   const stats = {
     total: tasks.length,
-    completed: tasks.filter((t) => t.progress === 100).length,
+    completed: tasks.filter((t) => t.status === "ACCEPTED").length,
     inProgress: tasks.filter((t) => t.progress > 0 && t.progress < 100).length,
-    todo: tasks.filter((t) => t.progress === 0).length,
+    todo: tasks.filter((t) => t.status === "PENDING_APPROVAL").length, // User requested Todo -> Pending Approval
   };
 
   return (
@@ -433,19 +487,24 @@ export default function TaskAssignmentPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
             {filteredTasks.map((task) => (
-              <TaskCard
+              <ExecutiveTaskCard
                 key={task.id}
                 task={task}
-                deleteMode={deleteMode}
-                onClick={(task) => {
-                  setSelectedTask(task);
+                expandedTasks={expandedTasks}
+                toggleExpand={toggleExpand}
+                onSelectTask={(t) => {
+                  setSelectedTask(t);
                   setIsDetailOpen(true);
                 }}
-                onEdit={(task) => {
-                  setEditingTask(task);
+                onEditTask={(t) => {
+                  setEditingTask(t);
                   setIsEditOpen(true);
                 }}
-                onConfirmDelete={(taskId) => setTaskToDelete(taskId)}
+                onDeleteTask={(id) => setTaskToDelete(id)}
+                fetchTasks={fetchTasks}
+                deleteMode={deleteMode}
+                userRole="Executive"
+                targetRole="Supervisor"
               />
             ))}
           </div>

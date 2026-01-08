@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types/task";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, Send, MessageSquare } from "lucide-react";
 import { taskApi } from "@/lib/task-api";
 import { useLanguage } from "@/contexts/language-context";
@@ -45,6 +46,7 @@ export function TaskDetailModal({
   const [isSendingComment, setIsSendingComment] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize progress when task changes
   useEffect(() => {
@@ -56,6 +58,13 @@ export function TaskDetailModal({
       fetchLogs();
     }
   }, [task, isOpen]);
+
+  // Auto-scroll to bottom when logs update
+  useEffect(() => {
+    if (logsEndRef.current && isOpen) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs, isOpen, isLoadingLogs]);
 
   const fetchLogs = async () => {
     const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
@@ -134,8 +143,8 @@ export function TaskDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between border-b pb-4">
-          <DialogTitle className="text-xl font-bold">
+        <DialogHeader className="flex flex-row items-center justify-between border-b border-slate-200/50 pb-4">
+          <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             {t.description}
           </DialogTitle>
           {/* Close button is automatic in DialogContent usually via X icon */}
@@ -144,33 +153,43 @@ export function TaskDetailModal({
         <div className="space-y-6 py-4">
           {/* Header Section */}
           <div>
-            <h2 className="text-2xl font-bold mb-1">{task.title}</h2>
-            <p className="text-muted-foreground">{task.description}</p>
+            <h2 className="text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">
+              {task.title}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400">
+              {task.description}
+            </p>
           </div>
 
           {/* Badges Row */}
           <div className="flex flex-wrap gap-2">
             <Badge
-              variant="secondary"
-              className={
-                task.priority === "HIGH"
-                  ? "bg-red-100 text-red-700"
-                  : task.priority === "MEDIUM"
-                  ? "bg-orange-100 text-orange-700"
-                  : "bg-green-100 text-green-700"
-              }
+              variant="outline"
+              className={`
+                border-0 rounded-lg px-2.5 py-1 font-medium
+                ${
+                  task.priority === "HIGH"
+                    ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                    : task.priority === "MEDIUM"
+                    ? "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300"
+                    : "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                }
+              `}
             >
               {task.priority || "MEDIUM"}
             </Badge>
             <Badge
-              variant="secondary"
-              className={
-                task.progress === 100
-                  ? "bg-green-100 text-green-700"
-                  : task.progress > 0
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-700"
-              }
+              variant="outline"
+              className={`
+                border-0 rounded-lg px-2.5 py-1 font-medium
+                ${
+                  task.progress === 100
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                    : task.progress > 0
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
+                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                }
+              `}
             >
               {task.progress === 100
                 ? t.completed
@@ -180,16 +199,16 @@ export function TaskDetailModal({
             </Badge>
             {task.project && (
               <Badge
-                variant="secondary"
-                className="bg-purple-100 text-purple-700"
+                variant="outline"
+                className="bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border-0 rounded-lg px-2.5 py-1 font-medium"
               >
                 {task.project.name}
               </Badge>
             )}
             {task.points && (
               <Badge
-                variant="secondary"
-                className="bg-yellow-100 text-yellow-700"
+                variant="outline"
+                className="bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 border-0 rounded-lg px-2.5 py-1 font-medium"
               >
                 {task.points} {t.totalPoints.split(" ")[1]}
               </Badge>
@@ -197,18 +216,20 @@ export function TaskDetailModal({
           </div>
 
           {/* Update Progress Section */}
-          <div className="bg-blue-50/50 rounded-xl p-6 space-y-4">
-            <div className="flex items-center gap-2 text-blue-700 font-medium">
+          <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-6 space-y-4 border border-blue-100 dark:border-blue-900/20">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-bold">
               <TrendingUpIcon className="h-4 w-4" />
               {t.updateProgress}
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
+                <span className="text-slate-500 dark:text-slate-400">
                   {t.slideToSetProgress}
                 </span>
-                <span className="font-bold text-lg">{progress}%</span>
+                <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                  {progress}%
+                </span>
               </div>
 
               <input
@@ -217,15 +238,15 @@ export function TaskDetailModal({
                 max="100"
                 value={progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 style={{
-                  background: `linear-gradient(to right, #2563eb ${progress}%, #e5e7eb ${progress}%)`,
+                  background: `linear-gradient(to right, #2563eb ${progress}%, #e2e8f0 ${progress}%)`,
                 }}
               />
             </div>
 
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all font-medium"
               onClick={handleSaveProgress}
               disabled={isSavingProgress}
             >
@@ -244,26 +265,26 @@ export function TaskDetailModal({
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-6 p-4 bg-muted/20 rounded-xl">
+          <div className="grid grid-cols-2 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+              <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
                 {t.assignedBy}
               </Label>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+              <div className="flex items-center gap-3 mt-2">
+                <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-xs font-bold text-purple-600 dark:text-purple-300 shadow-sm border border-purple-200 dark:border-purple-800/30">
                   {getInitials(task.creator?.fullName || "A")}
                 </div>
-                <span className="font-medium text-sm">
+                <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
                   {task.creator?.fullName || "Admin"}
                 </span>
               </div>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+              <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
                 {t.date}
               </Label>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-medium text-sm">
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
                   {new Date(task.dueDate).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
@@ -275,72 +296,173 @@ export function TaskDetailModal({
           </div>
 
           {/* Logs Section */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-4 border">
-            <div className="flex items-center gap-2 text-gray-700 font-medium border-b pb-2">
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 space-y-4 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 pb-2">
               <MessageSquare className="h-4 w-4" />
               {t.activityLogs}
             </div>
 
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {isLoadingLogs ? (
                 <div className="flex justify-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                 </div>
               ) : logs.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-4">
+                <p className="text-center text-sm text-slate-400 py-4 italic">
                   {t.noLogs}
                 </p>
               ) : (
-                logs.map((log, index) => (
-                  <div key={index} className="flex gap-3 text-sm">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                      {getInitials(log.user?.fullName || "System")}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">
-                          {log.user?.fullName || "System"}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(log.createdAt).toLocaleString()}
-                        </span>
+                <div className="space-y-4">
+                  {logs.map((log, index) => {
+                    const renderChanges = () => {
+                      if (
+                        log.action === "COMMENT" ||
+                        log.action === "COMMENT_ADDED"
+                      ) {
+                        return (
+                          <div className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                            <MessageSquare className="h-4 w-4 mt-0.5 text-indigo-500" />
+                            <span className="italic">
+                              "
+                              {log.comment ||
+                                JSON.parse(log.changes || "{}").comment ||
+                                ""}
+                              "
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      let parsedChanges = null;
+                      try {
+                        parsedChanges = log.changes
+                          ? JSON.parse(log.changes)
+                          : null;
+                      } catch (e) {
+                        parsedChanges = log.changes;
+                      }
+
+                      switch (log.action) {
+                        case "CREATED":
+                          return (
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Task created
+                            </span>
+                          );
+                        case "UPDATED":
+                          if (parsedChanges?.progress) {
+                            return (
+                              <span>
+                                Progress updated:{" "}
+                                <span className="font-semibold">
+                                  {parsedChanges.progress.from}%
+                                </span>{" "}
+                                →{" "}
+                                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                                  {parsedChanges.progress.to}%
+                                </span>
+                              </span>
+                            );
+                          }
+                          return <span>Task updated</span>;
+                        case "STATUS_CHANGED":
+                          if (parsedChanges?.status) {
+                            return (
+                              <span>
+                                Status changed:{" "}
+                                <span className="font-medium">
+                                  {parsedChanges.status.from?.replace(
+                                    /_/g,
+                                    " "
+                                  )}
+                                </span>{" "}
+                                →{" "}
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                  {parsedChanges.status.to?.replace(/_/g, " ")}
+                                </span>
+                              </span>
+                            );
+                          }
+                          return <span>Status changed</span>;
+                        case "REJECTED":
+                          return (
+                            <span className="text-red-600 dark:text-red-400 font-medium">
+                              Task Rejected. Reason: "
+                              {parsedChanges?.reason || "No reason provided"}"
+                            </span>
+                          );
+                        case "APPROVED":
+                          return (
+                            <span className="text-green-600 dark:text-green-400 font-medium">
+                              Task Approved
+                            </span>
+                          );
+                        default:
+                          return (
+                            <span className="text-slate-500">
+                              <span className="font-medium mr-1 uppercase text-xs">
+                                {log.action}:
+                              </span>
+                              {typeof parsedChanges === "object"
+                                ? JSON.stringify(parsedChanges)
+                                : log.message || ""}
+                            </span>
+                          );
+                      }
+                    };
+
+                    return (
+                      <div key={index} className="flex gap-3 text-sm group">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-200 dark:border-blue-800/30">
+                          {getInitials(log.user?.fullName || "System")}
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                              {log.user?.fullName || "System"}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {log.createdAt
+                                ? format(new Date(log.createdAt), "MMM d, p")
+                                : "Unknown Date"}
+                            </span>
+                          </div>
+                          <div className="text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                            {renderChanges()}
+                            {log.comment &&
+                              !["COMMENT", "COMMENT_ADDED"].includes(
+                                log.action
+                              ) && (
+                                <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700/50 italic text-slate-500 text-xs">
+                                  "{log.comment}"
+                                </div>
+                              )}
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-gray-600">
-                        {log.action === "COMMENT" ||
-                        log.action === "COMMENT_ADDED" ? (
-                          <span className="italic">
-                            "
-                            {log.comment ||
-                              log.details?.comment ||
-                              "No content"}
-                            "
-                          </span>
-                        ) : (
-                          <span>
-                            {log.action?.replace(/_/g, " ") || "Action"}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                  <div ref={logsEndRef} />
+                </div>
               )}
             </div>
           </div>
 
           {/* Add Response Section */}
           <div className="space-y-3 pt-2">
-            <Label className="text-sm font-medium">{t.addComment}</Label>
+            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {t.addComment}
+            </Label>
             <div className="relative">
               <Textarea
                 placeholder={t.writeComment}
-                className="min-h-[100px] resize-none pr-10"
+                className="min-h-[100px] resize-none pr-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
             </div>
             <Button
-              className="w-full bg-slate-600 hover:bg-slate-700 text-white"
+              className="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium shadow-lg shadow-slate-900/10"
               onClick={handleSendComment}
               disabled={isSendingComment || !comment.trim()}
             >
