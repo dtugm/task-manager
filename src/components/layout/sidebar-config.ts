@@ -33,14 +33,10 @@ export const getNavigation = (t: any) => [
   },
   {
     name: t.taskManagerMgr,
-    href: "/task-manager-for-manager",
+    href: "/task-manager",
     icon: ClipboardList,
   },
-  {
-    name: t.taskManagerSpv,
-    href: "/task-manager-for-supervisor",
-    icon: CheckSquare,
-  },
+
   { name: t.myTask, href: "/my-task", icon: Tag },
 ];
 
@@ -49,7 +45,7 @@ export const roleAccess: Record<string, string[]> = {
   Manager: [
     "/task-assignment",
     "/project-management",
-    "/task-manager-for-manager",
+    "/task-manager",
     "/my-task",
     "/attendance",
     "/attendance-log",
@@ -57,7 +53,7 @@ export const roleAccess: Record<string, string[]> = {
   ],
   Supervisor: [
     "/task-assignment",
-    "/task-manager-for-supervisor",
+    "/task-manager",
     "/my-task",
     "/attendance",
     "/attendance-log",

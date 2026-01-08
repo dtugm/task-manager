@@ -146,8 +146,8 @@ export default function TaskAssignmentPage() {
           const lowerQuery = searchQuery.toLowerCase();
           fetchedTasks = fetchedTasks.filter(
             (task) =>
-              task.title.toLowerCase().includes(lowerQuery) ||
-              task.description.toLowerCase().includes(lowerQuery)
+              (task.title?.toLowerCase() || "").includes(lowerQuery) ||
+              (task.description?.toLowerCase() || "").includes(lowerQuery)
           );
         }
 
@@ -285,7 +285,24 @@ export default function TaskAssignmentPage() {
     }
   };
 
-  // Fetch projects and managers when dialogs open
+  // Fetch projects and managers on mount and when dialogs open
+  useEffect(() => {
+    const loadOptions = async () => {
+      // Don't set loading state for background refreshes unless specifically needed
+      // setIsOptionsLoading(true);
+      try {
+        await Promise.all([fetchProjects(), fetchManagers()]);
+      } catch (error) {
+        console.error("Error loading options:", error);
+      }
+      // finally {
+      //   setIsOptionsLoading(false);
+      // }
+    };
+    loadOptions();
+  }, []); // Run on mount
+
+  // Re-fetch when dialogs open to ensure fresh data
   useEffect(() => {
     if (isCreateOpen || isEditOpen) {
       const loadOptions = async () => {
@@ -358,13 +375,7 @@ export default function TaskAssignmentPage() {
     }
 
     if (filterStatus !== "all") {
-      if (filterStatus === "pending" && task.progress !== 0) return false;
-      if (
-        filterStatus === "in-progress" &&
-        (task.progress === 0 || task.progress === 100)
-      )
-        return false;
-      if (filterStatus === "completed" && task.progress !== 100) return false;
+      if (task.status !== filterStatus) return false;
     }
 
     return true;

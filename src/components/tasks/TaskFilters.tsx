@@ -125,9 +125,14 @@ export function TaskFilters({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allStatus}</SelectItem>
-                  <SelectItem value="pending">{t.pending}</SelectItem>
-                  <SelectItem value="in-progress">{t.inProgress}</SelectItem>
-                  <SelectItem value="completed">{t.completed}</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="PENDING_APPROVAL">
+                    Pending Approval
+                  </SelectItem>
+                  <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
