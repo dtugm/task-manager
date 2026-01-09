@@ -177,7 +177,7 @@ export function ExecutiveTaskCard({
         onClick={() => onSelectTask(task)}
       >
         {/* Title and Badges */}
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 sm:gap-0">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
@@ -202,7 +202,7 @@ export function ExecutiveTaskCard({
             </p>
           </div>
 
-          <div className="flex gap-2 ml-4">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:ml-4">
             <Badge
               variant="outline"
               className={`
@@ -271,22 +271,24 @@ export function ExecutiveTaskCard({
         </div>
 
         {/* From, Project, Due Date */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-6 bg-white/30 dark:bg-slate-800/30 p-3 rounded-xl border border-white/10 w-fit">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4 text-sm text-slate-500 dark:text-slate-400 mb-6 bg-white/30 dark:bg-slate-800/30 p-3 rounded-xl border border-white/10 w-fit max-w-full">
           <div className="flex items-center gap-2">
             <User className="h-3.5 w-3.5" />
             <span>
-              {t.from}:{" "}
+              {t.assignedTo}:{" "}
               <span className="font-medium text-slate-700 dark:text-slate-200">
-                {task.creator?.fullName || "Executive"}
+                {task.assignees && task.assignees.length > 0
+                  ? task.assignees.map((a) => a.assignee.fullName).join(", ")
+                  : t.unassigned}
               </span>
             </span>
           </div>
-          <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-600/50" />
+          <div className="hidden sm:block w-px h-3.5 bg-slate-300 dark:bg-slate-600/50" />
           <div className="flex items-center gap-2">
             <Tag className="h-3.5 w-3.5" />
             <span>{task.project?.name || t.project}</span>
           </div>
-          <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-600/50" />
+          <div className="hidden sm:block w-px h-3.5 bg-slate-300 dark:bg-slate-600/50" />
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-3.5 w-3.5" />
             <span>{new Date(task.dueDate).toLocaleDateString()}</span>

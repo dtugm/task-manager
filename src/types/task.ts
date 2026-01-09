@@ -60,6 +60,7 @@ export interface UpdateTaskRequest {
   progress?: number;
   dueDate?: string;
   assigneeIds?: string[];
+  projectId?: string;
 }
 
 export interface TasksResponse {

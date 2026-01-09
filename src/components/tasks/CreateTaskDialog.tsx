@@ -144,14 +144,14 @@ export function CreateTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
         <DialogHeader className="border-b border-slate-200/50 pb-4">
           <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             {t.createTask}
           </DialogTitle>
           <DialogDescription>{t.taskAssignmentDesc}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 px-1">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Title
@@ -230,13 +230,10 @@ export function CreateTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <div
-                className="relative flex flex-col gap-2"
-                ref={projectDropdownRef}
-              >
-                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {t.project}
-                </Label>
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t.project}
+              </Label>
+              <div className="relative" ref={projectDropdownRef}>
                 <Input
                   placeholder={t.search}
                   value={projectSearch}
@@ -248,7 +245,7 @@ export function CreateTaskDialog({
                   className="w-full bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl"
                 />
                 {showProjectDropdown && projects.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl shadow-lg max-h-[200px] overflow-auto animate-in fade-in zoom-in-95 duration-200">
+                  <div className="absolute top-full z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl shadow-lg max-h-[200px] overflow-auto animate-in fade-in zoom-in-95 duration-200">
                     {projects
                       .filter((project) => {
                         if (!projectSearch) return true;

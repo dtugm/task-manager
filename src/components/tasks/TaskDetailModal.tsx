@@ -274,7 +274,6 @@ export function TaskDetailModal({
             </Button>
           </div>
 
-          {/* Info Grid */}
           <div className="grid grid-cols-2 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
               <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
@@ -290,6 +289,29 @@ export function TaskDetailModal({
               </div>
             </div>
             <div>
+              <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                {t.assignedTo || "Assigned To"}
+              </Label>
+              <div className="flex flex-col gap-2 mt-2">
+                {task.assignees && task.assignees.length > 0 ? (
+                  task.assignees.map((a) => (
+                    <div key={a.id} className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shadow-sm border border-blue-200 dark:border-blue-800/30">
+                        {getInitials(a.assignee?.fullName || "Unassigned")}
+                      </div>
+                      <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
+                        {a.assignee?.fullName || "Unassigned"}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500 italic">
+                    Unassigned
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="col-span-2">
               <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
                 {t.date}
               </Label>

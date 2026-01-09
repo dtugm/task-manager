@@ -97,7 +97,9 @@ export default function TaskAssignmentPage() {
   const [filterDateTo, setFilterDateTo] = useState<string>("");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
+
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterAssignee, setFilterAssignee] = useState<string>("");
 
   // Fetch tasks
   const fetchTasks = async () => {
@@ -378,6 +380,14 @@ export default function TaskAssignmentPage() {
       if (task.status !== filterStatus) return false;
     }
 
+    if (filterAssignee) {
+      const lowerAssignee = filterAssignee.toLowerCase();
+      const hasMatch = task.assignees?.some((a) =>
+        a.assignee.fullName.toLowerCase().includes(lowerAssignee)
+      );
+      if (!hasMatch) return false;
+    }
+
     return true;
   });
 
@@ -389,7 +399,7 @@ export default function TaskAssignmentPage() {
   };
 
   return (
-    <div className="relative isolate space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in-50 duration-500 min-h-[calc(100vh-4rem)]">
+    <div className="relative isolate space-y-8 max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in-50 duration-500 min-h-[calc(100vh-4rem)]">
       {/* Decorative Background Blobs */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob bg-[#0077FF]/30 dark:bg-[#0077FF]/20"></div>
@@ -398,7 +408,7 @@ export default function TaskAssignmentPage() {
       </div>
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#0C426A] to-[#0077FF] dark:from-white dark:to-slate-300">
             {t.taskAssignment}
@@ -407,7 +417,7 @@ export default function TaskAssignmentPage() {
             {t.taskAssignmentDesc}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           {/* Search Bar */}
           <div className="relative group flex-1 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
@@ -418,7 +428,7 @@ export default function TaskAssignmentPage() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-10 w-full md:w-[280px] bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
+              className="pl-10 w-full sm:w-[280px] lg:w-[280px] bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
             />
           </div>
 
@@ -480,6 +490,8 @@ export default function TaskAssignmentPage() {
           setFilterPriority={setFilterPriority}
           filterStatus={filterStatus}
           setFilterStatus={setFilterStatus}
+          filterAssignee={filterAssignee}
+          setFilterAssignee={setFilterAssignee}
           projects={projects}
           onClear={() => {
             setFilterDateFrom("");
@@ -487,6 +499,7 @@ export default function TaskAssignmentPage() {
             setFilterProject("all");
             setFilterPriority("all");
             setFilterStatus("all");
+            setFilterAssignee("");
           }}
         />
       </div>
@@ -514,7 +527,7 @@ export default function TaskAssignmentPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2">
             {filteredTasks.map((task) => (
               <ExecutiveTaskCard
                 key={task.id}

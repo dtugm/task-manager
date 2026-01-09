@@ -23,6 +23,8 @@ interface TaskFiltersProps {
   setFilterPriority: (value: string) => void;
   filterStatus: string;
   setFilterStatus: (value: string) => void;
+  filterAssignee: string;
+  setFilterAssignee: (value: string) => void;
   projects: Project[];
   onClear: () => void;
 }
@@ -38,6 +40,8 @@ export function TaskFilters({
   setFilterPriority,
   filterStatus,
   setFilterStatus,
+  filterAssignee,
+  setFilterAssignee,
   projects,
   onClear,
 }: TaskFiltersProps) {
@@ -50,7 +54,7 @@ export function TaskFilters({
           <h4 className="font-semibold text-sm text-muted-foreground">
             {t.filter}
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Date From */}
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">
@@ -134,6 +138,18 @@ export function TaskFilters({
                   <SelectItem value="REJECTED">Rejected</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            {/* Assignee */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Filter by Assignee
+              </Label>
+              <Input
+                placeholder="Search assignee..."
+                value={filterAssignee}
+                onChange={(e) => setFilterAssignee(e.target.value)}
+                className="h-8 bg-background"
+              />
             </div>
             {/* Clear Filters Button */}
             <div className="flex items-end">

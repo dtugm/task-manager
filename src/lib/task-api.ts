@@ -187,4 +187,32 @@ export const taskApi = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  assignTask: async (
+    token: string,
+    id: string,
+    assigneeIds: string[]
+  ): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>(`/tasks/${id}/assign`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ assigneeIds }),
+    });
+  },
+
+  unassignTask: async (
+    token: string,
+    id: string,
+    assigneeIds: string[]
+  ): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>(`/tasks/${id}/assign`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ assigneeIds }),
+    });
+  },
 };
