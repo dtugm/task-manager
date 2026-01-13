@@ -225,8 +225,7 @@ export function ManagerTaskCard({
               <div
                 className="cursor-pointer hover:underline decoration-indigo-500/30 underline-offset-4"
                 onClick={() => {
-                  setLogTask(task);
-                  setIsLogsOpen(true);
+                  onSelectTask(task);
                 }}
               >
                 <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -318,8 +317,7 @@ export function ManagerTaskCard({
                             <h5
                               className="font-medium text-slate-800 dark:text-slate-200 truncate cursor-pointer hover:text-indigo-600 transition-colors"
                               onClick={() => {
-                                setLogTask(child);
-                                setIsLogsOpen(true);
+                                onSelectTask(child);
                               }}
                             >
                               {child.title}

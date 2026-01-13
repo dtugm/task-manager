@@ -18,13 +18,9 @@ import { Loader2, Send, MessageSquare } from "lucide-react";
 import { taskApi } from "@/lib/task-api";
 import { useLanguage } from "@/contexts/language-context";
 
-// Simple toast fallback if not available
 const showToast = (message: string, type: "success" | "error" = "success") => {
-  // Check if toast exists in window or context, otherwise console
   console.log(`[${type.toUpperCase()}] ${message}`);
 };
-// Actually, let's just use console or simple state feedback for now as I don't see sonner setup explicitly in my context (though it's common).
-// I'll assume basic feedback.
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -87,6 +83,31 @@ export function TaskDetailModal({
     }
   };
 
+  // Helper to format description with clickable links
+  const formatDescription = (text: string) => {
+    if (!text) return "";
+    const urlRegex = /((?:https?:\/\/|www\.)[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        const href = part.startsWith("www.") ? `http://${part}` : part;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   if (!task) return null;
 
   const handleSaveProgress = async () => {
@@ -101,12 +122,10 @@ export function TaskDetailModal({
       if (progress === 100) status = "COMPLETED";
       else if (progress > 0) status = "IN_PROGRESS";
 
-      // 1. Update progress
       const progressPromise = taskApi.updateTask(token, task.id, {
         progress,
       });
 
-      // 2. Update status if needed (we'll always send it to be safe/consistent with logic)
       const statusPromise = taskApi.updateStatus(token, task.id, status);
 
       // Wait for both
@@ -141,7 +160,6 @@ export function TaskDetailModal({
         setComment("");
         showToast(t.commentAdded);
         fetchLogs();
-        // Maybe onUpdate to refresh? Comments might strictly not need it unless we show them.
       }
     } catch (err) {
       console.error("Failed to send comment", err);
@@ -152,7 +170,7 @@ export function TaskDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl p-4 sm:p-6">
         <DialogHeader className="flex flex-row items-center justify-between border-b border-slate-200/50 pb-4">
           <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             {t.description}
@@ -163,11 +181,11 @@ export function TaskDetailModal({
         <div className="space-y-6 py-4">
           {/* Header Section */}
           <div>
-            <h2 className="text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">
+            <h2 className="text-xl sm:text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">
               {task.title}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400">
-              {task.description}
+            <p className="text-slate-500 dark:text-slate-400 break-words whitespace-pre-wrap">
+              {formatDescription(task.description)}
             </p>
           </div>
 
@@ -274,7 +292,7 @@ export function TaskDetailModal({
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
               <Label className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
                 {t.assignedBy}
@@ -317,11 +335,12 @@ export function TaskDetailModal({
               </Label>
               <div className="flex items-center gap-2 mt-2">
                 <span className="font-medium text-sm text-slate-700 dark:text-slate-200">
-                  {new Date(task.dueDate).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
+                  {new Date(task.dueDate).toLocaleString("id-ID", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: "Asia/Jakarta",
+                  })}{" "}
+                  WIB
                 </span>
               </div>
             </div>
@@ -352,13 +371,15 @@ export function TaskDetailModal({
                         log.action === "COMMENT_ADDED"
                       ) {
                         return (
-                          <div className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                            <MessageSquare className="h-4 w-4 mt-0.5 text-indigo-500" />
-                            <span className="italic">
+                          <div className="flex items-start gap-2 text-slate-700 dark:text-slate-300 w-full">
+                            <MessageSquare className="h-4 w-4 mt-0.5 text-indigo-500 shrink-0" />
+                            <span className="italic w-full break-words whitespace-pre-wrap">
                               "
-                              {log.comment ||
-                                JSON.parse(log.changes || "{}").comment ||
-                                ""}
+                              {formatDescription(
+                                log.comment ||
+                                  JSON.parse(log.changes || "{}").comment ||
+                                  ""
+                              )}
                               "
                             </span>
                           </div>
@@ -418,9 +439,12 @@ export function TaskDetailModal({
                           return <span>Status changed</span>;
                         case "REJECTED":
                           return (
-                            <span className="text-red-600 dark:text-red-400 font-medium">
+                            <span className="text-red-600 dark:text-red-400 font-medium w-full break-words whitespace-pre-wrap">
                               Task Rejected. Reason: "
-                              {parsedChanges?.reason || "No reason provided"}"
+                              {formatDescription(
+                                parsedChanges?.reason || "No reason provided"
+                              )}
+                              "
                             </span>
                           );
                         case "APPROVED":

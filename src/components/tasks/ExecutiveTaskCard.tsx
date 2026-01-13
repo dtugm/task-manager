@@ -163,11 +163,32 @@ export function ExecutiveTaskCard({
       }
     }
 
-    // 2. Remove logic for progress === 100.
-    // User explicitly requested NOT to show buttons when "still completed" (progress 100),
-    // only when status is PENDING_APPROVAL.
-
     return null;
+  };
+
+  const formatDescription = (text: string) => {
+    if (!text) return "";
+    const urlRegex = /((?:https?:\/\/|www\.)[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        const href = part.startsWith("www.") ? `http://${part}` : part;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline z-50 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
   };
 
   return (
@@ -178,7 +199,7 @@ export function ExecutiveTaskCard({
       >
         {/* Title and Badges */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 sm:gap-0">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                 {task.title}
@@ -197,8 +218,8 @@ export function ExecutiveTaskCard({
                 </Button>
               )}
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2">
-              {task.description}
+            <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 break-words">
+              {formatDescription(task.description)}
             </p>
           </div>
 
@@ -291,7 +312,14 @@ export function ExecutiveTaskCard({
           <div className="hidden sm:block w-px h-3.5 bg-slate-300 dark:bg-slate-600/50" />
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-3.5 w-3.5" />
-            <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+            <span>
+              {new Date(task.dueDate).toLocaleString("id-ID", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: "Asia/Jakarta",
+              })}{" "}
+              WIB
+            </span>
           </div>
         </div>
 
