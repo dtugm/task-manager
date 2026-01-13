@@ -7,7 +7,35 @@ import {
   UpdateUserData,
   UserContext,
 } from "@/types/auth";
-import { fetcher } from "./api-client";
+
+// ... imports
+
+const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
+
+async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (process.env.NEXT_PUBLIC_REGISTER_APIKEY) {
+    headers["x-api-key"] = process.env.NEXT_PUBLIC_REGISTER_APIKEY;
+  }
+
+  const response = await fetch(`${BASE_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || "An error occurred");
+  }
+
+  return data;
+}
 
 export const authApi = {
   signIn: async (

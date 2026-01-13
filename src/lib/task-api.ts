@@ -7,7 +7,28 @@ import {
   CreatedTasksSummaryResponse,
 } from "@/types/task";
 
-import { fetcher } from "./api-client";
+const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
+
+async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const response = await fetch(`${BASE_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || "An error occurred");
+  }
+
+  return data;
+}
 
 export const taskApi = {
   getTasks: async (

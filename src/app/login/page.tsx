@@ -25,15 +25,10 @@ export default function LoginPage() {
   const organizationId =
     process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G";
 
-  const handleAuthSuccess = async (tokens: {
-    accessToken: string;
-    refreshToken: string;
-  }) => {
-    document.cookie = `accessToken=${tokens.accessToken}; path=/; max-age=604800; SameSite=Lax`;
-    document.cookie = `refreshToken=${tokens.refreshToken}; path=/; max-age=604800; SameSite=Lax`;
-
+  const handleAuthSuccess = async (accessToken: string) => {
+    document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
     try {
-      const userResponse = await authApi.getMe(tokens.accessToken);
+      const userResponse = await authApi.getMe(accessToken);
       if (userResponse.success) {
         localStorage.setItem("user_data", JSON.stringify(userResponse.data));
         const userData = userResponse.data as any;
@@ -72,10 +67,7 @@ export default function LoginPage() {
         const response = await authApi.signIn(credentials);
 
         if (response.success) {
-          await handleAuthSuccess({
-            accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken,
-          });
+          await handleAuthSuccess(response.data.accessToken);
         } else {
           setError(response.error?.message || "Login failed");
         }
@@ -100,7 +92,6 @@ export default function LoginPage() {
             }
 
             document.cookie = `accessToken=${response.data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
-            document.cookie = `refreshToken=${response.data.refreshToken}; path=/; max-age=604800; SameSite=Lax`;
             localStorage.setItem("user_data", JSON.stringify(userData));
             localStorage.setItem("user_role", "Unassigned");
 
