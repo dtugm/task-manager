@@ -39,9 +39,28 @@ interface EditTaskDialogProps {
   task: Task | null;
   managers: Manager[];
   projects: Project[];
-  isOptionsLoading: boolean;
+  isOptionsLoading?: boolean;
   onTaskUpdated: () => void;
 }
+
+// Helper to convert UTC string to WIB (UTC+7) formatted string for datetime-local input
+const toWIB = (isoString: string) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const wibOffset = 7 * 60 * 60 * 1000;
+  const wibDate = new Date(date.getTime() + wibOffset);
+  return wibDate.toISOString().slice(0, 16);
+};
+
+// Helper to convert WIB formatted string from input back to UTC ISO string
+const fromWIB = (wibString: string) => {
+  if (!wibString) return "";
+  const wibOffset = 7 * 60 * 60 * 1000;
+  // Treat input as UTC to parse consistently
+  const localAsUtc = new Date(wibString + ":00.000Z").getTime();
+  const utcDate = new Date(localAsUtc - wibOffset);
+  return utcDate.toISOString();
+};
 
 export function EditTaskDialog({
   open,
@@ -77,8 +96,6 @@ export function EditTaskDialog({
   const managerDropdownRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sync assignableUsers with managers prop if managers load later or change
-  // and we haven't searched yet (to maintain initial list)
   if (assignableUsers.length === 0 && managers.length > 0 && !managerSearch) {
     setAssignableUsers(managers);
   }
@@ -90,14 +107,7 @@ export function EditTaskDialog({
         description: task.description,
         points: task.points,
         priority: task.priority,
-        dueDate: task.dueDate
-          ? new Date(
-              new Date(task.dueDate).getTime() -
-                new Date().getTimezoneOffset() * 60000
-            )
-              .toISOString()
-              .slice(0, 16)
-          : "",
+        dueDate: task.dueDate ? toWIB(task.dueDate) : "",
         projectId: task.project?.id || task.projectId || "", // Init projectId
         assigneeIds: task.assigneeIds || [],
       });
@@ -118,7 +128,6 @@ export function EditTaskDialog({
         } as Project);
         setProjectSearch(task.project.name);
       } else if (task.projectId) {
-        // Best effort if we have ID but not object, try to find in projects prop
         const found = projects.find((p) => p.id === task.projectId);
         if (found) {
           setSelectedProject(found);
@@ -165,38 +174,14 @@ export function EditTaskDialog({
         description: formData.description,
         points: formData.points,
         priority: formData.priority,
-        dueDate: formData.dueDate,
+        dueDate: fromWIB(formData.dueDate || ""),
         projectId: formData.projectId,
+        assigneeIds: selectedManagers.map((m) => m.id),
       };
 
-      const promises = [taskApi.updateTask(token, task.id, updateData)];
+      const response = await taskApi.updateTask(token, task.id, updateData);
 
-      // Separate assignment logic with Diff
-      const currentAssigneeIds = selectedManagers.map((m) => m.id);
-      const originalAssigneeIds =
-        task.assignees?.map((a) => a.assignee.id) || [];
-
-      // Find IDs to ADD
-      const idsToAdd = currentAssigneeIds.filter(
-        (id) => !originalAssigneeIds.includes(id)
-      );
-
-      // Find IDs to REMOVE
-      const idsToRemove = originalAssigneeIds.filter(
-        (id) => !currentAssigneeIds.includes(id)
-      );
-
-      if (idsToAdd.length > 0) {
-        promises.push(taskApi.assignTask(token, task.id, idsToAdd) as any);
-      }
-
-      if (idsToRemove.length > 0) {
-        promises.push(taskApi.unassignTask(token, task.id, idsToRemove) as any);
-      }
-
-      const [response, assignResponse] = await Promise.all(promises);
-
-      if (response && (response as any).success) {
+      if (response && response.success) {
         onTaskUpdated();
         onOpenChange(false);
         setError(null);

@@ -40,6 +40,25 @@ interface CreateTaskDialogProps {
   onTaskCreated: () => void;
 }
 
+// Helper to convert UTC string to WIB (UTC+7) formatted string for datetime-local input
+const toWIB = (isoString: string) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const wibOffset = 7 * 60 * 60 * 1000;
+  const wibDate = new Date(date.getTime() + wibOffset);
+  return wibDate.toISOString().slice(0, 16);
+};
+
+// Helper to convert WIB formatted string from input back to UTC ISO string
+const fromWIB = (wibString: string) => {
+  if (!wibString) return "";
+  const wibOffset = 7 * 60 * 60 * 1000;
+  // Treat input as UTC to parse consistently
+  const localAsUtc = new Date(wibString + ":00.000Z").getTime();
+  const utcDate = new Date(localAsUtc - wibOffset);
+  return utcDate.toISOString();
+};
+
 export function CreateTaskDialog({
   open,
   onOpenChange,
@@ -65,12 +84,9 @@ export function CreateTaskDialog({
   const [showManagerDropdown, setShowManagerDropdown] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedManagers, setSelectedManagers] = useState<Manager[]>([]);
-  // Use local state for assignable users, initialized with managers but updated via search
   const [assignableUsers, setAssignableUsers] = useState<Manager[]>(managers);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync assignableUsers with managers prop if managers load later or change
-  // and we haven't searched yet (to maintain initial list)
   if (assignableUsers.length === 0 && managers.length > 0 && !managerSearch) {
     setAssignableUsers(managers);
   }
@@ -127,7 +143,11 @@ export function CreateTaskDialog({
 
     setIsSubmitting(true);
     try {
-      const response = await taskApi.createTask(token, formData);
+      const createData = {
+        ...formData,
+        dueDate: fromWIB(formData.dueDate),
+      };
+      const response = await taskApi.createTask(token, createData);
       if (response.success) {
         onTaskCreated();
         onOpenChange(false);
