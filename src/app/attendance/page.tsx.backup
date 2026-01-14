@@ -1,0 +1,1171 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Clock,
+  Building2,
+  Home,
+  MapPin,
+  HeartPulse,
+  Ban,
+  Download,
+  Calendar,
+  Loader2,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import * as XLSX from "xlsx";
+import { useLanguage } from "@/contexts/language-context";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { attendanceApi } from "@/lib/attendance-api";
+import type { ClockInPayload, AttendanceLog } from "@/types/attendance";
+import {
+  LeaveType,
+  type LeaveRequestPayload,
+  type LeaveRequest,
+} from "@/types/leave";
+
+// Extracted components
+import { AttendanceTypeCard } from "@/components/attendance/AttendanceTypeCard";
+import { LeaveRequestForm } from "@/components/attendance/LeaveRequestForm";
+import { ClockOutForm } from "@/components/attendance/ClockOutForm";
+import { EditLeaveDialog } from "@/components/attendance/EditLeaveDialog";
+import { DeleteLeaveDialog } from "@/components/attendance/DeleteLeaveDialog";
+
+export default function AttendancePage() {
+  const { t } = useLanguage();
+  const [selectedType, setSelectedType] = useState("wfo");
+  const [time, setTime] = useState(new Date());
+  const [activities, setActivities] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Attendance state
+  const [isClockedIn, setIsClockedIn] = useState(false);
+  const [attendanceId, setAttendanceId] = useState<string | null>(null);
+  const [clockInTime, setClockInTime] = useState<Date | null>(null);
+
+  // History state
+  const [history, setHistory] = useState<AttendanceLog[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [filterWorkType, setFilterWorkType] = useState<string>("all");
+
+  // Leave request state
+  const [leaveStartDate, setLeaveStartDate] = useState<string>("");
+  const [leaveEndDate, setLeaveEndDate] = useState<string>("");
+  const [leaveReason, setLeaveReason] = useState<string>("");
+
+  // Leave history state
+  const [leaveHistory, setLeaveHistory] = useState<LeaveRequest[]>([]);
+  const [leaveHistoryLoading, setLeaveHistoryLoading] = useState(false);
+  const [filterLeaveStatus, setFilterLeaveStatus] = useState<string>("all");
+  const [filterLeaveType, setFilterLeaveType] = useState<string>("all");
+
+  // Edit/Delete leave state
+  const [editingLeave, setEditingLeave] = useState<LeaveRequest | null>(null);
+  const [editLeaveType, setEditLeaveType] = useState<string>("");
+  const [editStartDate, setEditStartDate] = useState<string>("");
+  const [editEndDate, setEditEndDate] = useState<string>("");
+  const [editReason, setEditReason] = useState<string>("");
+  const [deleteLeaveId, setDeleteLeaveId] = useState<string | null>(null);
+
+  // Geolocation
+  const {
+    location,
+    locationError,
+    distance,
+    isWithinRange,
+    isLoading: locationLoading,
+    MAX_DISTANCE_METERS,
+  } = useGeolocation();
+
+  const attendanceTypes = [
+    {
+      id: "wfo",
+      label: "Work from Office",
+      displayLabel: t.wfo,
+      icon: Building2,
+      color: "text-blue-500",
+      bg: "bg-blue-500/10",
+      gradient: "from-blue-500/20 to-cyan-500/20",
+      border: "hover:border-blue-500/50",
+      disabled: !isWithinRange,
+    },
+    {
+      id: "wfh",
+      label: "Work from Home",
+      displayLabel: t.wfh,
+      icon: Home,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+      gradient: "from-purple-500/20 to-pink-500/20",
+      border: "hover:border-purple-500/50",
+      disabled: false,
+    },
+    {
+      id: "field",
+      label: "Field Work",
+      displayLabel: t.fieldWork,
+      icon: MapPin,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+      gradient: "from-green-500/20 to-emerald-500/20",
+      border: "hover:border-green-500/50",
+      disabled: false,
+    },
+    {
+      id: "sick",
+      label: LeaveType.SICK,
+      displayLabel: t.sick,
+      icon: HeartPulse,
+      color: "text-red-500",
+      bg: "bg-red-500/10",
+      gradient: "from-red-500/20 to-orange-500/20",
+      border: "hover:border-red-500/50",
+      disabled: false,
+      isLeave: true,
+    },
+    {
+      id: "absent",
+      label: LeaveType.ABSENT,
+      displayLabel: t.absent,
+      icon: Ban,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10",
+      gradient: "from-orange-500/20 to-yellow-500/20",
+      border: "hover:border-orange-500/50",
+      disabled: false,
+      isLeave: true,
+    },
+    {
+      id: "vacation",
+      label: LeaveType.VACATION,
+      displayLabel: "Vacation",
+      icon: Calendar,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+      gradient: "from-cyan-500/20 to-teal-500/20",
+      border: "hover:border-cyan-500/50",
+      disabled: false,
+      isLeave: true,
+    },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch attendance history
+  const fetchHistory = async () => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    setHistoryLoading(true);
+    try {
+      const resp = await attendanceApi.getAllCurrentUser(
+        token,
+        1,
+        20,
+        startDate || undefined,
+        endDate || undefined,
+        filterWorkType
+      );
+      if (resp.success && resp.data?.data) {
+        setHistory(resp.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Fetch leave history
+  const fetchLeaveHistory = async () => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    setLeaveHistoryLoading(true);
+    try {
+      const resp = await attendanceApi.getMyLeaveRequests(
+        token,
+        1,
+        20,
+        filterLeaveStatus,
+        filterLeaveType
+      );
+      if (resp.success && resp.data?.data) {
+        setLeaveHistory(resp.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch leave history:", error);
+    } finally {
+      setLeaveHistoryLoading(false);
+    }
+  };
+
+  // Check today's attendance status on mount
+  useEffect(() => {
+    const checkTodayStatus = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+
+      try {
+        const resp = await attendanceApi.getTodayAttendance(token);
+        if (resp.success && resp.data) {
+          if (resp.data.clockIn && !resp.data.clockOut) {
+            setIsClockedIn(true);
+            setAttendanceId(resp.data.id);
+            setClockInTime(new Date(resp.data.clockIn));
+            if (resp.data.activities) setActivities(resp.data.activities);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check today's status:", error);
+      }
+    };
+
+    checkTodayStatus();
+    fetchHistory();
+    fetchLeaveHistory();
+  }, []);
+
+  // Re-fetch history when filters change
+  useEffect(() => {
+    fetchHistory();
+  }, [startDate, endDate, filterWorkType]);
+
+  // Re-fetch leave history when filters change
+  useEffect(() => {
+    fetchLeaveHistory();
+  }, [filterLeaveStatus, filterLeaveType]);
+
+  // Auto-select WFH if out of range
+  useEffect(() => {
+    if (!isWithinRange && selectedType === "wfo" && location) {
+      setSelectedType("wfh");
+    }
+  }, [isWithinRange, location, selectedType]);
+
+  const getAuthToken = () => {
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    return match ? match[2] : null;
+  };
+
+  const handleClockIn = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      alert("Please login first");
+      return;
+    }
+
+    if (!location) {
+      alert("Waiting for location...");
+      return;
+    }
+
+    const selectedTypeObj = attendanceTypes.find((t) => t.id === selectedType);
+    if (!selectedTypeObj) return;
+
+    // Check if it's a leave request
+    if (selectedTypeObj.isLeave) {
+      if (!leaveStartDate || !leaveEndDate || !leaveReason.trim()) {
+        alert("Please fill in all fields: Start Date, End Date, and Reason");
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const payload: LeaveRequestPayload = {
+          type: selectedTypeObj.label as LeaveType,
+          requestReason: leaveReason,
+          startDate: leaveStartDate,
+          endDate: leaveEndDate,
+        };
+
+        const resp = await attendanceApi.createLeaveRequest(token, payload);
+        if (resp.success) {
+          alert("Leave request submitted successfully!");
+          setLeaveStartDate("");
+          setLeaveEndDate("");
+          setLeaveReason("");
+          fetchLeaveHistory(); // Refresh leave history table
+        }
+      } catch (error: any) {
+        alert(error.message || "Failed to submit leave request");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Regular clock in for work types
+    setIsLoading(true);
+    try {
+      const payload: ClockInPayload = {
+        clockIn: new Date().toISOString(),
+        latClockIn: location.lat,
+        longClockIn: location.lng,
+        workType: selectedTypeObj.label as ClockInPayload["workType"],
+      };
+
+      const resp = await attendanceApi.clockIn(token, payload);
+      if (resp.success && resp.data) {
+        setIsClockedIn(true);
+        setAttendanceId(resp.data.id);
+        setClockInTime(new Date());
+        alert("Clocked in successfully!");
+        fetchHistory();
+        fetchLeaveHistory(); // Refresh leave history in case user submitted leave today
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to clock in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    const token = getAuthToken();
+    if (!token || !attendanceId) return;
+
+    if (!activities.trim()) {
+      alert("Please enter your activities");
+      return;
+    }
+
+    if (!location) {
+      alert("Waiting for location...");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        clockOut: new Date().toISOString(),
+        latClockOut: location.lat,
+        longClockOut: location.lng,
+        activities: activities,
+      };
+
+      const resp = await attendanceApi.clockOut(token, attendanceId, payload);
+      if (resp.success) {
+        alert("Clocked out successfully!");
+        setIsClockedIn(false);
+        setAttendanceId(null);
+        setActivities("");
+        setClockInTime(null);
+        fetchHistory();
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to clock out");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (history.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    const exportData = history.map((log) => ({
+      Date: log.clockIn ? format(new Date(log.clockIn), "yyyy-MM-dd") : "-",
+      "Work Type": log.workType || "-",
+      "Clock In": log.clockIn ? format(new Date(log.clockIn), "HH:mm:ss") : "-",
+      "Clock Out": log.clockOut
+        ? format(new Date(log.clockOut), "HH:mm:ss")
+        : "-",
+      Activities: log.activities || "-",
+      Status: log.clockOut ? "Completed" : "Active",
+      "Lat Clock In": log.latClockIn ?? "-",
+      "Lng Clock In": log.longClockIn ?? "-",
+      "Lat Clock Out": log.latClockOut ?? "-",
+      "Lng Clock Out": log.longClockOut ?? "-",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
+    const fileName = `attendance_export_${format(
+      new Date(),
+      "yyyyMMdd_HHmmss"
+    )}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleLeaveExport = () => {
+    if (leaveHistory.length === 0) {
+      alert("No leave data to export");
+      return;
+    }
+
+    const exportData = leaveHistory.map((log) => ({
+      Type: log.type,
+      Status: log.status,
+      "Start Date": log.startDate,
+      "End Date": log.endDate,
+      Reason: log.requestReason,
+      Approver: log.approver || "-",
+      "Approval Note": log.approvalNote || "-",
+      "Created At": format(new Date(log.createdAt), "yyyy-MM-dd HH:mm:ss"),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leave Requests");
+
+    const fileName = `leave_export_${format(
+      new Date(),
+      "yyyyMMdd_HHmmss"
+    )}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleEditLeave = (leave: LeaveRequest) => {
+    setEditingLeave(leave);
+    setEditLeaveType(leave.type);
+    setEditStartDate(leave.startDate);
+    setEditEndDate(leave.endDate);
+    setEditReason(leave.requestReason);
+  };
+
+  const handleUpdateLeave = async () => {
+    const token = getAuthToken();
+    if (!token || !editingLeave) return;
+
+    if (
+      !editLeaveType ||
+      !editStartDate ||
+      !editEndDate ||
+      !editReason.trim()
+    ) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload: LeaveRequestPayload = {
+        type: editLeaveType as LeaveType,
+        requestReason: editReason,
+        startDate: editStartDate,
+        endDate: editEndDate,
+      };
+
+      const resp = await attendanceApi.updateLeaveRequest(
+        token,
+        editingLeave.id,
+        payload
+      );
+      if (resp.success) {
+        alert("Leave request updated successfully!");
+        setEditingLeave(null);
+        fetchLeaveHistory();
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to update leave request");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteLeave = async () => {
+    const token = getAuthToken();
+    if (!token || !deleteLeaveId) return;
+
+    setIsLoading(true);
+    try {
+      const resp = await attendanceApi.deleteLeaveRequest(token, deleteLeaveId);
+      if (resp.success) {
+        alert("Leave request deleted successfully!");
+        setDeleteLeaveId(null);
+        fetchLeaveHistory();
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to delete leave request");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative isolate min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 animate-in fade-in-50 duration-500">
+      {/* Blobs Background */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob bg-purple-500/30 dark:bg-purple-500/20"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 bg-blue-500/30 dark:bg-blue-500/20"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000 bg-pink-500/30 dark:bg-pink-500/20"></div>
+      </div>
+
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Top Section: Status & Types */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-3xl border border-white/20 p-8 shadow-xl shadow-indigo-500/5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+            <div className="flex items-center gap-6">
+              <div className="relative group">
+                <div
+                  className={cn(
+                    "absolute inset-0 blur-xl opacity-20 group-hover:opacity-30 transition-opacity rounded-full",
+                    isClockedIn ? "bg-green-500" : "bg-blue-500"
+                  )}
+                ></div>
+                <div
+                  className={cn(
+                    "relative h-20 w-20 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white/20 dark:ring-slate-900/20",
+                    isClockedIn
+                      ? "bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-500/30"
+                      : "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/30"
+                  )}
+                >
+                  <Clock className="h-10 w-10 text-white animate-pulse" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t.status}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset",
+                      isClockedIn
+                        ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-green-500/20"
+                        : "bg-slate-500/10 text-slate-600 dark:text-slate-400 ring-slate-500/20"
+                    )}
+                  >
+                    {isClockedIn ? "Clocked In" : "Not Started"}
+                  </span>
+                  {locationError && (
+                    <span
+                      className="text-xs text-red-500 flex items-center gap-1"
+                      title={locationError}
+                    >
+                      <AlertCircle className="w-3 h-3" /> Location Error
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center md:text-right">
+              <div className="text-5xl sm:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-500 dark:from-white dark:to-slate-400 font-mono">
+                {time.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+              <div className="text-lg font-medium text-slate-400 dark:text-slate-500 mt-2">
+                {time.toLocaleDateString([], {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </div>
+            </div>
+          </div>
+
+          {!isClockedIn ? (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 pl-1 border-l-4 border-indigo-500">
+                {t.selectAttendanceType}
+              </h3>
+
+              {/* Location Status */}
+              {location && distance !== null && (
+                <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Distance to office: {Math.round(distance)}m
+                  {!isWithinRange && (
+                    <span className="text-red-500 text-xs">
+                      (Must be &lt; {MAX_DISTANCE_METERS}m for WFO)
+                    </span>
+                  )}
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                {attendanceTypes.map((type) => {
+                  const Icon = type.icon;
+                  const isSelected = selectedType === type.id;
+                  const isDisabled = type.disabled;
+
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => !isDisabled && setSelectedType(type.id)}
+                      disabled={isDisabled}
+                      title={
+                        isDisabled ? "You are not within office range" : ""
+                      }
+                      className={cn(
+                        "relative group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border transition-all duration-300 h-32 overflow-hidden",
+                        isSelected
+                          ? "border-blue-500/50 shadow-lg shadow-blue-500/20"
+                          : "bg-white/40 dark:bg-slate-800/40 border-white/20 dark:border-slate-700/30 hover:bg-white/60 dark:hover:bg-slate-800/60",
+                        isDisabled && "opacity-50 cursor-not-allowed grayscale"
+                      )}
+                    >
+                      {isSelected && !isDisabled && (
+                        <div
+                          className={cn(
+                            "absolute inset-0 bg-gradient-to-br opacity-20",
+                            type.gradient
+                          )}
+                        />
+                      )}
+                      <div
+                        className={cn(
+                          "p-3 rounded-xl transition-colors duration-300",
+                          isSelected && !isDisabled
+                            ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-110"
+                            : cn(
+                                "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:scale-110",
+                                type.color
+                              )
+                        )}
+                      >
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <span
+                        className={cn(
+                          "text-sm font-medium text-center z-10 transition-colors",
+                          isSelected && !isDisabled
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-slate-600 dark:text-slate-300"
+                        )}
+                      >
+                        {type.displayLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Leave Request Form - shown when leave type selected */}
+              {attendanceTypes.find((t) => t.id === selectedType)?.isLeave && (
+                <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-white/40 dark:bg-slate-800/40 p-6 rounded-2xl border border-white/20 dark:border-slate-700/30">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Start Date
+                      </Label>
+                      <Input
+                        type="date"
+                        value={leaveStartDate}
+                        onChange={(e) => setLeaveStartDate(e.target.value)}
+                        className="bg-white/50 dark:bg-slate-900/50 focus-visible:ring-indigo-500/30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        End Date
+                      </Label>
+                      <Input
+                        type="date"
+                        value={leaveEndDate}
+                        onChange={(e) => setLeaveEndDate(e.target.value)}
+                        className="bg-white/50 dark:bg-slate-900/50 focus-visible:ring-indigo-500/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Reason
+                    </Label>
+                    <Textarea
+                      value={leaveReason}
+                      onChange={(e) => setLeaveReason(e.target.value)}
+                      placeholder="Please provide a reason for your leave request..."
+                      className="resize-none h-24 bg-white/50 dark:bg-slate-900/50 focus-visible:ring-indigo-500/30"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={handleClockIn}
+                disabled={isLoading || !location || locationLoading}
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/30 transition-all mt-6"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {attendanceTypes.find((t) => t.id === selectedType)?.isLeave
+                      ? "Submitting..."
+                      : "Clocking In..."}
+                  </>
+                ) : (
+                  <>
+                    <Clock className="mr-2 h-5 w-5" />
+                    {attendanceTypes.find((t) => t.id === selectedType)?.isLeave
+                      ? "Submit Leave Request"
+                      : t.clockIn}
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Today's Activities
+                </Label>
+                <Textarea
+                  value={activities}
+                  onChange={(e) => setActivities(e.target.value)}
+                  placeholder="Describe what you worked on today..."
+                  className="resize-none h-32 bg-white/50 dark:bg-slate-900/50 focus-visible:ring-indigo-500/30"
+                />
+              </div>
+              <Button
+                onClick={handleClockOut}
+                disabled={isLoading || !activities.trim()}
+                className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-lg shadow-red-500/30 transition-all"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Clocking Out...
+                  </>
+                ) : (
+                  "Clock Out"
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Section: History with Tabs */}
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-3xl border border-white/20 p-8 shadow-xl shadow-indigo-500/5">
+          <Tabs defaultValue="attendance" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+              <TabsTrigger value="attendance">Attendance History</TabsTrigger>
+              <TabsTrigger value="leave">Leave History</TabsTrigger>
+            </TabsList>
+
+            {/* Attendance History Tab */}
+            <TabsContent value="attendance" className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400">
+                    {t.attendanceHistory}
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {t.yourPastRecords}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchHistory}
+                    disabled={historyLoading}
+                    className="rounded-xl"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        historyLoading && "animate-spin"
+                      )}
+                    />
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleExport}
+                    className="rounded-xl border-green-200 dark:border-green-800/30 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-800 hover:border-green-300 transition-all bg-white/50 dark:bg-slate-900/50"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </Button>
+                </div>
+              </div>
+
+              {/* Attendance Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-xs mb-1.5 block">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">End Date</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Work Type</Label>
+                  <Select
+                    value={filterWorkType}
+                    onValueChange={setFilterWorkType}
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50">
+                      <SelectValue placeholder="All types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      <SelectItem value="Work from Office">
+                        Work from Office
+                      </SelectItem>
+                      <SelectItem value="Work from Home">
+                        Work from Home
+                      </SelectItem>
+                      <SelectItem value="Field Work">Field Work</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                      setFilterWorkType("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+
+              {/* Attendance Table */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/20">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Clock In</TableHead>
+                      <TableHead>Clock Out</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Activities
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {historyLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          <div className="flex justify-center items-center gap-2 text-slate-500">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Loading history...
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : history.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="h-24 text-center text-slate-500"
+                        >
+                          No attendance records found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      history.map((log) => (
+                        <TableRow
+                          key={log.id}
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                        >
+                          <TableCell className="font-medium">
+                            {log.clockIn
+                              ? format(new Date(log.clockIn), "MMM d, yyyy")
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {log.workType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {log.clockIn
+                              ? format(new Date(log.clockIn), "HH:mm")
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {log.clockOut
+                              ? format(new Date(log.clockOut), "HH:mm")
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell max-w-[200px] truncate">
+                            {log.activities || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={cn(
+                                log.clockOut
+                                  ? "bg-green-100 text-green-700 hover:bg-green-100"
+                                  : "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                              )}
+                            >
+                              {log.clockOut ? "Completed" : "Active"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Leave History Tab */}
+            <TabsContent value="leave" className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400">
+                    Leave History
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Your leave requests and their status
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchLeaveHistory}
+                    disabled={leaveHistoryLoading}
+                    className="rounded-xl"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        leaveHistoryLoading && "animate-spin"
+                      )}
+                    />
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleLeaveExport}
+                    className="rounded-xl border-green-200 dark:border-green-800/30 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-800 hover:border-green-300 transition-all bg-white/50 dark:bg-slate-900/50"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </Button>
+                </div>
+              </div>
+
+              {/* Leave Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-xs mb-1.5 block">Status</Label>
+                  <Select
+                    value={filterLeaveStatus}
+                    onValueChange={setFilterLeaveStatus}
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="APPROVED">Approved</SelectItem>
+                      <SelectItem value="REJECTED">Rejected</SelectItem>
+                      <SelectItem value="CANCELED">Canceled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Type</Label>
+                  <Select
+                    value={filterLeaveType}
+                    onValueChange={setFilterLeaveType}
+                  >
+                    <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50">
+                      <SelectValue placeholder="All types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      <SelectItem value="SICK">Sick</SelectItem>
+                      <SelectItem value="VACATION">Vacation</SelectItem>
+                      <SelectItem value="ABSENT">Absent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setFilterLeaveStatus("all");
+                      setFilterLeaveType("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+
+              {/* Leave Table */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/20">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Reason
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaveHistoryLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          <div className="flex justify-center items-center gap-2 text-slate-500">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Loading leave history...
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : leaveHistory.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="h-24 text-center text-slate-500"
+                        >
+                          No leave requests found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      leaveHistory.map((leave) => (
+                        <TableRow
+                          key={leave.id}
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                        >
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {leave.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {format(new Date(leave.startDate), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {format(new Date(leave.endDate), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell max-w-[200px] truncate">
+                            {leave.requestReason}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={cn(
+                                leave.status === "APPROVED" &&
+                                  "bg-green-100 text-green-700 hover:bg-green-100",
+                                leave.status === "PENDING" &&
+                                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
+                                leave.status === "REJECTED" &&
+                                  "bg-red-100 text-red-700 hover:bg-red-100",
+                                leave.status === "CANCELED" &&
+                                  "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                              )}
+                            >
+                              {leave.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEditLeave(leave)}
+                                disabled={leave.status !== "PENDING"}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => setDeleteLeaveId(leave.id)}
+                                disabled={leave.status !== "PENDING"}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Edit Leave Dialog */}
+      <EditLeaveDialog
+        leave={editingLeave}
+        open={!!editingLeave}
+        onClose={() => setEditingLeave(null)}
+        onUpdate={handleUpdateLeave}
+        isLoading={isLoading}
+        leaveType={editLeaveType}
+        setLeaveType={setEditLeaveType}
+        startDate={editStartDate}
+        setStartDate={setEditStartDate}
+        endDate={editEndDate}
+        setEndDate={setEditEndDate}
+        reason={editReason}
+        setReason={setEditReason}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteLeaveDialog
+        open={!!deleteLeaveId}
+        onClose={() => setDeleteLeaveId(null)}
+        onConfirm={handleDeleteLeave}
+        isLoading={isLoading}
+      />
+    </div>
+  );
+}
