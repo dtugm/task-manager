@@ -98,6 +98,36 @@ export const attendanceApi = {
     );
   },
 
+  getAllAttendanceLogs: async (
+    token: string,
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    workType?: string,
+    role?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<{ data: AttendanceLog[]; pagination: any }>> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (search) params.append("search", search); // Assumes backend supports 'search' for name/email
+    if (workType && workType !== "all") params.append("workType", workType);
+    if (role && role !== "all") params.append("role", role);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+
+    return fetcher<ApiResponse<{ data: AttendanceLog[]; pagination: any }>>(
+      `/attendance-log?${params.toString()}`,
+      token,
+      {
+        method: "GET",
+      }
+    );
+  },
+
   createLeaveRequest: async (
     token: string,
     payload: LeaveRequestPayload

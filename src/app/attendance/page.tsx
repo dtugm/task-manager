@@ -246,7 +246,7 @@ export default function AttendancePage() {
         workType: getWorkTypeString(selectedType),
         clockIn: new Date().toISOString(),
         latClockIn: location.lat,
-        longClockIn: location.lng,
+        lngClockIn: location.lng,
       };
 
       await clockIn(payload);
@@ -325,9 +325,9 @@ export default function AttendancePage() {
           Activities: log.activities || "-",
           Status: log.clockOut ? "Completed" : "Active",
           "Lat Clock In": log.latClockIn ?? "-",
-          "Lng Clock In": log.longClockIn ?? "-",
+          "Lng Clock In": log.lngClockIn ?? "-",
           "Lat Clock Out": log.latClockOut ?? "-",
-          "Lng Clock Out": log.longClockOut ?? "-",
+          "Lng Clock Out": log.lngClockOut ?? "-",
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
