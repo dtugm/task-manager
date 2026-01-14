@@ -29,6 +29,12 @@ export interface LeaveRequest {
   approvalNote: string | null;
   createdAt: string;
   updatedAt: string;
+  requester?: {
+    id: string;
+    username: string;
+    email: string;
+    fullName: string;
+  };
 }
 
 export interface ApiResponse<T> {

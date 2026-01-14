@@ -159,4 +159,45 @@ export const attendanceApi = {
       method: "DELETE",
     });
   },
+
+  // Manager-specific endpoints
+  getAllLeaveRequests: async (
+    token: string,
+    page: number = 1,
+    limit: number = 20,
+    status?: string,
+    type?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<{ data: LeaveRequest[]; pagination: any }>> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status && status !== "all") params.append("status", status);
+    if (type && type !== "all") params.append("type", type);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+
+    return fetcher<ApiResponse<{ data: LeaveRequest[]; pagination: any }>>(
+      `/leave-request?${params.toString()}`,
+      token
+    );
+  },
+
+  approveLeaveRequest: async (
+    token: string,
+    id: string,
+    payload: { status: "APPROVED" | "REJECTED"; approvalNote: string }
+  ): Promise<ApiResponse<LeaveRequest>> => {
+    return fetcher<ApiResponse<LeaveRequest>>(
+      `/leave-request/${id}/approve`,
+      token,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
 };
