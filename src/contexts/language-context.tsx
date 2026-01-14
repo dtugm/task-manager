@@ -20,6 +20,8 @@ type Translations = {
   theme: string;
   toggleTheme: string;
   logout: string;
+  pathAccess: string;
+  leaveApprovals: string;
 
   // Dashboard
   welcome: string;
@@ -254,6 +256,8 @@ const translations: Record<Language, Translations> = {
     taskManagerMgr: "Task Manager ",
     taskManagerSpv: "Task Manager (Supervisor)",
     myTask: "My Tasks",
+    pathAccess: "Path Access",
+    leaveApprovals: "Leave Approvals",
     search: "Search...",
     language: "Language",
     theme: "Theme",
@@ -492,6 +496,8 @@ const translations: Record<Language, Translations> = {
     taskManagerMgr: "Manajer Tugas",
     taskManagerSpv: "Manajer Tugas (Supervisor)",
     myTask: "Tugas Saya",
+    pathAccess: "Akses Halaman",
+    leaveApprovals: "Perizinan",
     search: "Cari...",
     language: "Bahasa",
     theme: "Tema",

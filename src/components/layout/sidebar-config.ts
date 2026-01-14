@@ -8,13 +8,26 @@ import {
   Folder,
   Settings,
   Building2,
+  ClipboardClock,
+  Route,
+  FolderKanban,
 } from "lucide-react";
 
 export const getNavigation = (t: any) => [
   { name: t.dashboard, href: "/", icon: LayoutDashboard },
+  {
+    name: t.pathAccess,
+    href: "/path-access",
+    icon: Route,
+  },
   { name: t.attendance, href: "/attendance", icon: Clock },
-  { name: t.attendanceLog, href: "/attendance-log", icon: ClipboardList },
-  { name: t.taskAssignment, href: "/task-assignment", icon: CheckSquare },
+  { name: t.attendanceLog, href: "/attendance-log", icon: ClipboardClock },
+  {
+    name: t.leaveApprovals,
+    href: "/leave-approvals",
+    icon: ClipboardList,
+  },
+
   { name: t.reimbursement, href: "/reimbursement", icon: DollarSign },
   {
     name: t.reimbursementMgmt,
@@ -31,34 +44,35 @@ export const getNavigation = (t: any) => [
     href: "/organization-management",
     icon: Building2,
   },
+  { name: t.taskAssignment, href: "/task-assignment", icon: CheckSquare },
   {
     name: t.taskManagerMgr,
     href: "/task-manager",
-    icon: ClipboardList,
+    icon: FolderKanban,
   },
 
   { name: t.myTask, href: "/my-task", icon: Tag },
 ];
 
-export const roleAccess: Record<string, string[]> = {
-  Executive: ["/task-assignment", "/project-management"],
-  Manager: [
-    "/task-assignment",
-    "/project-management",
-    "/task-manager",
-    "/my-task",
-    "/attendance",
-    "/attendance-log",
-    "/organization-management",
-  ],
-  Supervisor: [
-    "/task-assignment",
-    "/task-manager",
-    "/my-task",
-    "/attendance",
-    "/attendance-log",
-  ],
-  Employee: ["/my-task", "/attendance"],
-  Unassigned: ["/waiting-approval"],
-  "Super Admin": ["*"],
-};
+// export const roleAccess: Record<string, string[]> = {
+//   Executive: ["/task-assignment", "/project-management"],
+//   Manager: [
+//     "/task-assignment",
+//     "/project-management",
+//     "/task-manager",
+//     "/my-task",
+//     "/attendance",
+//     "/attendance-log",
+//     "/organization-management",
+//   ],
+//   Supervisor: [
+//     "/task-assignment",
+//     "/task-manager",
+//     "/my-task",
+//     "/attendance",
+//     "/attendance-log",
+//   ],
+//   Employee: ["/my-task", "/attendance"],
+//   Unassigned: ["/waiting-approval"],
+//   "Super Admin": ["*"],
+// };

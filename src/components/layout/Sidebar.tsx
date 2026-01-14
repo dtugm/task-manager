@@ -6,10 +6,17 @@ import { cn } from "@/lib/utils";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/language-context";
 import { useUserRole } from "@/hooks/useUserRole";
-import { getNavigation, roleAccess } from "./sidebar-config";
+import { getNavigation } from "./sidebar-config";
+import { pathAccessApi } from "@/lib/path-access-api";
+
+const getAuthToken = () => {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+  return match ? match[2] : null;
+};
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -18,6 +25,25 @@ export function Sidebar({ className }: { className?: string }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const { role: userRole } = useUserRole();
+  const [apiAllowedPaths, setApiAllowedPaths] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const fetchAccess = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+      try {
+        const resp = await pathAccessApi.getMe(token);
+        if (resp.success) {
+          setApiAllowedPaths(resp.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch path access", e);
+      }
+    };
+    if (userRole) {
+      fetchAccess();
+    }
+  }, [userRole]);
 
   const isExpanded = !isCollapsed || isHovered;
 
@@ -25,7 +51,8 @@ export function Sidebar({ className }: { className?: string }) {
     if (item.href === "/") return true;
     if (!userRole) return false;
     if (userRole === "Super Admin") return true;
-    const allowedRoutes = roleAccess[userRole] || [];
+
+    const allowedRoutes = apiAllowedPaths || [];
     return allowedRoutes.includes(item.href);
   });
 
@@ -143,12 +170,32 @@ export function MobileSidebar() {
   const rawNavigation = getNavigation(t);
   const [open, setOpen] = useState(false);
   const { role: userRole } = useUserRole();
+  const [apiAllowedPaths, setApiAllowedPaths] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const fetchAccess = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+      try {
+        const resp = await pathAccessApi.getMe(token);
+        if (resp.success) {
+          setApiAllowedPaths(resp.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch path access", e);
+      }
+    };
+    if (userRole) {
+      fetchAccess();
+    }
+  }, [userRole]);
 
   const navigation = rawNavigation.filter((item) => {
     if (item.href === "/") return true;
     if (!userRole) return false;
     if (userRole === "Super Admin") return true;
-    const allowedRoutes = roleAccess[userRole] || [];
+
+    const allowedRoutes = apiAllowedPaths || [];
     return allowedRoutes.includes(item.href);
   });
 
