@@ -48,7 +48,9 @@ export function useAttendance() {
     try {
       const resp = await attendanceApi.getTodayAttendance(token);
       if (resp.success && resp.data) {
-        setIsClockedIn(true);
+        // Use availability flag if present, otherwise fallback to check if clockIn exists
+        const isAvailable = resp.data.availability ?? !!resp.data.clockIn;
+        setIsClockedIn(isAvailable);
         setAttendanceId(resp.data.id);
         if (resp.data.clockIn) {
           setClockInTime(new Date(resp.data.clockIn));

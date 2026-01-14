@@ -74,6 +74,15 @@ export function useLeaveRequests() {
     setEditReason(leave.requestReason);
   };
 
+  const openDeleteDialog = (id: string) => {
+    setDeleteLeaveId(id);
+  };
+
+  const closeDialogs = () => {
+    setEditingLeave(null);
+    setDeleteLeaveId(null);
+  };
+
   const handleUpdateLeave = async () => {
     const token = getAuthToken();
     if (!token || !editingLeave) {
@@ -156,6 +165,8 @@ export function useLeaveRequests() {
     handleEditLeave,
     handleUpdateLeave,
     handleDeleteLeave,
+    openDeleteDialog,
+    closeDialogs,
     fetchLeaveHistory,
   };
 }

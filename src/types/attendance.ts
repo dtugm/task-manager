@@ -22,6 +22,7 @@ export interface AttendanceLog {
   longClockOut?: number;
   workType: string;
   activities?: string;
+  availability?: boolean;
   createdAt: string;
   updatedAt: string;
 }

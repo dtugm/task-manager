@@ -62,6 +62,21 @@ export function LeaveRequestForm({
           className="resize-none h-24 bg-white/50 dark:bg-slate-900/50 focus-visible:ring-indigo-500/30"
         />
       </div>
+
+      <Button
+        onClick={onSubmit}
+        disabled={isLoading || !startDate || !endDate || !reason.trim()}
+        className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/30 transition-all mt-6"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Submitting...
+          </>
+        ) : (
+          "Submit Leave Request"
+        )}
+      </Button>
     </div>
   );
 }
