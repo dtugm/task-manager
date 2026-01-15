@@ -91,7 +91,7 @@ export function useAttendance() {
     const resp = await attendanceApi.clockOut(token, attendanceId, {
       clockOut: new Date().toISOString(),
       latClockOut: latitude,
-      lngClockOut: longitude,
+      longClockOut: longitude,
       activities,
     });
 

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authApi } from "@/lib/auth-api";
 import { UserContext } from "@/types/auth";
+import { clearTokens } from "@/lib/token-utils";
 
 export function Header() {
   const { setTheme, theme } = useTheme();
@@ -135,8 +136,7 @@ export function Header() {
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600 cursor-pointer"
                 onClick={() => {
-                  document.cookie = "accessToken=; path=/; max-age=0";
-                  localStorage.removeItem("user_data");
+                  clearTokens();
                   window.location.href = "/login";
                 }}
               >

@@ -100,6 +100,18 @@ export default function AttendancePage() {
     fetchHistory,
   } = useAttendance();
 
+  // Calculate working hours
+  const getWorkingHours = () => {
+    if (!isClockedIn || !clockInTime) return "0h 0m";
+
+    const now = new Date();
+    const diff = now.getTime() - clockInTime.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hours}h ${minutes}m`;
+  };
+
   const {
     leaveHistory,
     leaveHistoryLoading,
@@ -246,7 +258,7 @@ export default function AttendancePage() {
         workType: getWorkTypeString(selectedType),
         clockIn: new Date().toISOString(),
         latClockIn: location.lat,
-        lngClockIn: location.lng,
+        longClockIn: location.lng,
       };
 
       await clockIn(payload);
@@ -325,9 +337,9 @@ export default function AttendancePage() {
           Activities: log.activities || "-",
           Status: log.clockOut ? "Completed" : "Active",
           "Lat Clock In": log.latClockIn ?? "-",
-          "Lng Clock In": log.lngClockIn ?? "-",
+          "Lng Clock In": log.longClockIn ?? "-",
           "Lat Clock Out": log.latClockOut ?? "-",
-          "Lng Clock Out": log.lngClockOut ?? "-",
+          "Lng Clock Out": log.longClockOut ?? "-",
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -451,6 +463,14 @@ export default function AttendancePage() {
                     </span>
                   )}
                 </div>
+                {isClockedIn && (
+                  <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    <span className="font-medium">Working: </span>
+                    <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                      {getWorkingHours()}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

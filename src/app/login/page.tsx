@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/auth-api";
 import { organizationApi } from "@/lib/organization-api";
+import { setTokens } from "@/lib/token-utils";
 
 import { BackgroundEffects } from "./components/BackgroundEffects";
 import { LoginHeader } from "./components/LoginHeader";
@@ -25,8 +26,14 @@ export default function LoginPage() {
   const organizationId =
     process.env.NEXT_PUBLIC_ORGANIZATION_ID || "KELGsLB6canc9jAX7035G";
 
-  const handleAuthSuccess = async (accessToken: string) => {
-    document.cookie = `accessToken=${accessToken}; path=/; max-age=604800; SameSite=Lax`;
+  const handleAuthSuccess = async (
+    accessToken: string,
+    refreshToken: string,
+    expiresIn?: number
+  ) => {
+    // Store tokens using utility function
+    setTokens(accessToken, refreshToken, expiresIn || 43200);
+
     try {
       const userResponse = await authApi.getMe(accessToken);
       if (userResponse.success) {
@@ -67,7 +74,11 @@ export default function LoginPage() {
         const response = await authApi.signIn(credentials);
 
         if (response.success) {
-          await handleAuthSuccess(response.data.accessToken);
+          await handleAuthSuccess(
+            response.data.accessToken,
+            response.data.refreshToken,
+            response.data.expiresIn
+          );
         } else {
           setError(response.error?.message || "Login failed");
         }
@@ -91,7 +102,12 @@ export default function LoginPage() {
               });
             }
 
-            document.cookie = `accessToken=${response.data.accessToken}; path=/; max-age=604800; SameSite=Lax`;
+            // Store tokens using utility function
+            setTokens(
+              response.data.accessToken,
+              response.data.refreshToken,
+              response.data.expiresIn || 43200
+            );
             localStorage.setItem("user_data", JSON.stringify(userData));
             localStorage.setItem("user_role", "Unassigned");
 

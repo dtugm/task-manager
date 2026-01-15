@@ -109,4 +109,13 @@ export const authApi = {
       },
     });
   },
+
+  refreshToken: async (
+    refreshToken: string
+  ): Promise<ApiResponse<AuthResponse>> => {
+    return fetcher<ApiResponse<AuthResponse>>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken }),
+    });
+  },
 };

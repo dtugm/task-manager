@@ -30,6 +30,7 @@ export interface UserContext {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn?: number; // Token expiration time in seconds
   user: User;
 }
 
