@@ -39,20 +39,66 @@ export interface User {
   projectRoles: ProjectRole[];
 }
 
+export interface BaseLogUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface BaseLog {
+  date: string;
+  user: BaseLogUser;
+}
+
+export interface AttendanceItem extends BaseLog {
+  type: "ATTENDANCE";
+  workType: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  lngClockIn: number | null;
+  latClockIn: number | null;
+  activities: string | null;
+  pauseHours: number;
+  workingHours: number;
+  overtimeHours: number;
+  totalWorkingHours: number;
+  overtime: {
+    clockIn: string | null;
+    clockOut: string | null;
+    activities: string | null;
+    hours: number;
+  };
+}
+
+export interface LeaveItem extends BaseLog {
+  type: "LEAVE";
+  startDate: string;
+  endDate: string;
+  totalLeaveDays: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  leaveType: string;
+  requestReason: string;
+  approvalNote: string | null;
+}
+
+export type AttendanceLogItem = AttendanceItem | LeaveItem;
+
+// Keeping existing AttendanceLog for other parts of the app for now,
+// though we might want to consolidate eventually.
 export interface AttendanceLog {
   id: string;
   clockIn: string;
   clockOut: string | null;
   latClockIn: number;
-  lngClockIn: number; // Changed from longClockIn to match API
+  lngClockIn: number;
   latClockOut: number | null;
-  lngClockOut: number | null; // Changed from longClockOut to match API
+  lngClockOut: number | null;
   activities: string | null;
   availability: boolean;
   date: string;
   workType: string;
   user: User;
-  attendancePauses: any[]; // You might want to define a type for pauses too if needed
+  attendancePauses: any[];
   createdAt: string;
   updatedAt: string;
 }

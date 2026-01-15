@@ -31,6 +31,8 @@ import {
   Briefcase,
   Clock,
   Loader2,
+  Building,
+  X,
 } from "lucide-react";
 import {
   Popover,
@@ -44,17 +46,22 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
 import { useLanguage } from "@/contexts/language-context";
-import { AttendanceLog } from "@/types/attendance";
+import { AttendanceLogItem } from "@/types/attendance";
 import { useDebounce } from "@/hooks/use-debounce";
 import jsCookie from "js-cookie";
 import { attendanceApi } from "@/lib/attendance-api";
 import * as XLSX from "xlsx";
+import { useProjects } from "@/hooks/useProjects";
 
 export default function AttendanceLogPage() {
   const { t } = useLanguage();
-  // const [logs, setLogs] = useState<AttendanceLog[]>([]); // Replaced by allFetchedLogs
-  const [loading, setLoading] = useState(true);
 
+  // State for logs to display
+  const [logs, setLogs] = useState<AttendanceLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Filters
   // Filters
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
@@ -62,18 +69,17 @@ export default function AttendanceLogPage() {
     from: undefined,
     to: undefined,
   });
+  const [recordType, setRecordType] = useState("all");
   const [workType, setWorkType] = useState("all");
+  const [status, setStatus] = useState("all");
   const [role, setRole] = useState("all");
+  const [projectId, setProjectId] = useState("all");
+
+  const { projects } = useProjects();
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  // const [totalPages, setTotalPages] = useState(1); // Derived
-  // const [totalItems, setTotalItems] = useState(0); // Derived
-
-  // State for logs to display
-  const [logs, setLogs] = useState<AttendanceLog[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -97,6 +103,8 @@ export default function AttendanceLogPage() {
 
       const isSearching = debouncedSearch.length > 0;
 
+      // If searching, fetch "all" (limit 3000) for client-side filtering
+      // If NOT searching, use efficient server-side pagination
       const fetchPage = isSearching ? 1 : currentPage;
       const fetchLimit = isSearching ? 3000 : itemsPerPage;
 
@@ -104,21 +112,32 @@ export default function AttendanceLogPage() {
         authToken,
         fetchPage,
         fetchLimit,
-        undefined,
-        workType === "all" ? undefined : workType,
+        undefined, // Skip server-side search param as it's not supported
+        recordType === "Attendance"
+          ? workType === "all"
+            ? undefined
+            : workType
+          : undefined,
         role === "all" ? undefined : role,
         startDate,
-        endDate
+        endDate,
+        projectId === "all" ? undefined : projectId,
+        recordType === "all" ? undefined : recordType,
+        recordType === "Leave"
+          ? status === "all"
+            ? undefined
+            : status
+          : undefined
       );
 
       if (response.success && response.data) {
         if (isSearching) {
           // CLIENT-SIDE FILTERING & PAGINATION
-          const allData = response.data.data;
+          const allData = response.data.attendanceLogs;
           const searchLower = debouncedSearch.toLowerCase();
           const filtered = allData.filter(
             (log) =>
-              log.user.fullName.toLowerCase().includes(searchLower) ||
+              log.user.name.toLowerCase().includes(searchLower) ||
               log.user.email.toLowerCase().includes(searchLower)
           );
 
@@ -133,16 +152,30 @@ export default function AttendanceLogPage() {
           setLogs(paginatedLogs);
         } else {
           // SERVER-SIDE PAGINATION
-          setLogs(response.data.data);
+          setLogs(response.data.attendanceLogs);
           setTotalItems(response.data.pagination.total);
         }
+      } else {
+        setLogs([]);
+        setTotalItems(0);
       }
     } catch (error: any) {
       console.error("Failed to fetch logs:", error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, debouncedSearch, workType, role, date]);
+  }, [
+    currentPage,
+    itemsPerPage,
+    debouncedSearch,
+    workType,
+    status,
+    recordType,
+    role,
+    date,
+    projectId,
+  ]);
 
   // Effect to fetch when any dependency changes
   useEffect(() => {
@@ -152,7 +185,16 @@ export default function AttendanceLogPage() {
   // Reset page when filters change (except pagination controls)
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, workType, role, date, itemsPerPage]);
+  }, [
+    debouncedSearch,
+    workType,
+    status,
+    recordType,
+    role,
+    date,
+    itemsPerPage,
+    projectId,
+  ]);
 
   const handleExport = async () => {
     try {
@@ -168,26 +210,64 @@ export default function AttendanceLogPage() {
         token,
         1,
         1000,
-        debouncedSearch,
-        workType === "all" ? undefined : workType,
+        undefined,
+        recordType === "Attendance"
+          ? workType === "all"
+            ? undefined
+            : workType
+          : undefined,
         role === "all" ? undefined : role,
         startDate,
-        endDate
+        endDate,
+        projectId === "all" ? undefined : projectId,
+        recordType === "all" ? undefined : recordType,
+        recordType === "Leave"
+          ? status === "all"
+            ? undefined
+            : status
+          : undefined
       );
 
-      if (response.success && response.data?.data) {
-        const dataToExport = response.data.data.map((log) => ({
-          Employee: log.user.fullName,
-          Date: format(new Date(log.date), "dd MMM yyyy"),
-          "Clock In": format(new Date(log.clockIn), "HH:mm"),
-          "Clock Out": log.clockOut
-            ? format(new Date(log.clockOut), "HH:mm")
-            : "-",
-          "Work Type": log.workType,
-          Location: `(${log.latClockIn}, ${log.lngClockIn})`,
-          Role: log.user.organizationRoles?.[0]?.role || "-",
-          Email: log.user.email,
-        }));
+      if (response.success && response.data?.attendanceLogs) {
+        const dataToExport = response.data.attendanceLogs.map((log) => {
+          if (log.type === "ATTENDANCE") {
+            return {
+              Type: "Attendance",
+              Employee: log.user.name,
+              Email: log.user.email,
+              Date: format(new Date(log.date), "dd MMM yyyy"),
+              "Clock In": log.clockIn
+                ? format(new Date(log.clockIn), "HH:mm")
+                : "-",
+              "Clock Out": log.clockOut
+                ? format(new Date(log.clockOut), "HH:mm")
+                : "-",
+              "Work Type": log.workType,
+              "Working Hours": log.workingHours?.toFixed(2) || "0",
+              "Pause Hours": log.pauseHours?.toFixed(2) || "0",
+              "Overtime Hours": log.overtimeHours?.toFixed(2) || "0",
+              "Total Working Hours": log.totalWorkingHours?.toFixed(2) || "0",
+              Activities: log.activities || "-",
+              Location: `(${log.latClockIn}, ${log.lngClockIn})`,
+            };
+          } else {
+            return {
+              Type: "Leave",
+              Employee: log.user.name,
+              Email: log.user.email,
+              Date: format(new Date(log.date), "dd MMM yyyy"),
+              Status: log.status,
+              "Leave Type": log.leaveType,
+              "Req Reason": log.requestReason,
+              "Start Date": log.startDate,
+              "End Date": log.endDate,
+              "Working Hours": "-",
+              "Pause Hours": "-",
+              "Overtime Hours": "-",
+              "Total Working Hours": "-",
+            };
+          }
+        });
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -195,6 +275,8 @@ export default function AttendanceLogPage() {
         XLSX.writeFile(wb, "Attendance_Logs.xlsx");
 
         alert("Attendance logs exported successfully");
+      } else {
+        alert("No data to export");
       }
     } catch (error) {
       console.error("Failed to export:", error);
@@ -205,8 +287,11 @@ export default function AttendanceLogPage() {
   const clearFilters = () => {
     setSearch("");
     setDate({ from: undefined, to: undefined });
+    setRecordType("all");
     setWorkType("all");
+    setStatus("all");
     setRole("all");
+    setProjectId("all");
     setCurrentPage(1);
   };
 
@@ -305,19 +390,74 @@ export default function AttendanceLogPage() {
                 </PopoverContent>
               </Popover>
 
-              {/* Work Type Filter */}
-              <Select value={workType} onValueChange={setWorkType}>
-                <SelectTrigger className="w-full md:w-[180px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl">
-                  <Briefcase className="mr-2 h-4 w-4 text-slate-500" />
-                  <SelectValue placeholder="Work Type" />
+              {/* Record Type Filter (Main Type) */}
+              <Select
+                value={recordType}
+                onValueChange={(val) => {
+                  setRecordType(val);
+                  setWorkType("all"); // Reset subtypes
+                  setStatus("all");
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[160px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl">
+                  <Filter className="mr-2 h-4 w-4 text-slate-500" />
+                  <SelectValue placeholder="Record Type" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Work from Office">
-                    Work from Office
-                  </SelectItem>
-                  <SelectItem value="Work from Home">Work from Home</SelectItem>
-                  <SelectItem value="Field Work">Field Work</SelectItem>
+                  <SelectItem value="all">All Records</SelectItem>
+                  <SelectItem value="Attendance">Attendance</SelectItem>
+                  <SelectItem value="Leave">Leave</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Conditional Sub-Filters */}
+              {recordType === "Attendance" && (
+                <Select value={workType} onValueChange={setWorkType}>
+                  <SelectTrigger className="w-full md:w-[180px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl animate-in fade-in zoom-in-95 duration-200">
+                    <Briefcase className="mr-2 h-4 w-4 text-slate-500" />
+                    <SelectValue placeholder="Work Type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
+                    <SelectItem value="all">All Work Types</SelectItem>
+                    <SelectItem value="Work from Office">
+                      Work from Office
+                    </SelectItem>
+                    <SelectItem value="Work from Home">
+                      Work from Home
+                    </SelectItem>
+                    <SelectItem value="Field Work">Field Work</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {recordType === "Leave" && (
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="w-full md:w-[150px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl animate-in fade-in zoom-in-95 duration-200">
+                    <Filter className="mr-2 h-4 w-4 text-slate-500" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Project Filter */}
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger className="w-full md:w-[200px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl">
+                  <Building className="mr-2 h-4 w-4 text-slate-500" />
+                  <SelectValue placeholder="Project" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -334,6 +474,16 @@ export default function AttendanceLogPage() {
                   <SelectItem value="Employee">Employee</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Clear Filters Button */}
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="h-10 bg-white/60 dark:bg-slate-900/60 border-transparent text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors shadow-sm rounded-xl px-4"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
             </div>
           </div>
 
@@ -349,19 +499,28 @@ export default function AttendanceLogPage() {
                     {t.date}
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                    {t.role}
+                    Type
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                    {t.clockIn}
+                    Details / Status
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                    {t.clockOut}
+                    Times
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                    {t.allWorkType}
+                    Working Hours
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                    {t.activities}
+                    Pause
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                    Overtime
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                    Total
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                    Activities / Reason
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                     {t.location}
@@ -371,7 +530,7 @@ export default function AttendanceLogPage() {
               <TableBody>
                 {loading ? (
                   <TableRow className="border-none">
-                    <TableCell colSpan={8} className="h-64 text-center">
+                    <TableCell colSpan={11} className="h-64 text-center">
                       <div className="flex justify-center items-center h-full">
                         <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
                       </div>
@@ -380,7 +539,7 @@ export default function AttendanceLogPage() {
                 ) : logs.length === 0 ? (
                   /* Empty State */
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableCell colSpan={8} className="h-64 text-center">
+                    <TableCell colSpan={11} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center mb-4">
                           <History className="h-8 w-8 text-slate-300 dark:text-slate-600" />
@@ -393,72 +552,161 @@ export default function AttendanceLogPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  logs.map((log) => (
-                    <TableRow
-                      key={log.id}
-                      className="hover:bg-white/40 dark:hover:bg-slate-800/40 border-white/10 transition-colors"
-                    >
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-slate-100">
-                            {log.user.fullName}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {log.user.email}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">
-                        {format(new Date(log.date), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                          {log.user.organizationRoles?.[0]?.role || "Employee"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium text-green-600 dark:text-green-400">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          {format(new Date(log.clockIn), "HH:mm")}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium text-amber-600 dark:text-amber-400">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          {log.clockOut
-                            ? format(new Date(log.clockOut), "HH:mm")
-                            : "-"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                            log.workType === "Work from Home" &&
-                              "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300",
-                            log.workType === "Work from Office" &&
-                              "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
-                            log.workType === "Field Work" &&
-                              "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
+                  logs.map((log, index) => {
+                    const isAttendance = log.type === "ATTENDANCE";
+                    const isLeave = log.type === "LEAVE";
+
+                    return (
+                      <TableRow
+                        key={`${log.user?.id}-${log.date}-${index}`}
+                        className="hover:bg-white/40 dark:hover:bg-slate-800/40 border-white/10 transition-colors"
+                      >
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-slate-100">
+                              {log.user?.name || "Unknown"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {log.user?.email || "-"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-slate-600 dark:text-slate-400">
+                          {format(new Date(log.date), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {isAttendance ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                              Attendance
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300">
+                              Leave
+                            </span>
                           )}
-                        >
-                          {log.workType}
-                        </span>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-slate-600 dark:text-slate-400">
-                        {log.activities || "-"}
-                      </TableCell>
-                      <TableCell className="text-slate-500">
-                        <div
-                          className="flex items-center gap-1 text-xs"
-                          title={`In: ${log.latClockIn}, ${log.lngClockIn}`}
-                        >
-                          <MapPin className="h-3.5 w-3.5" />
-                          View
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          {isAttendance ? (
+                            // For Attendance: show WorkType then Active/Completed status
+                            <div className="flex flex-col gap-1">
+                              <span
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded w-fit font-medium",
+                                  log.workType === "Work from Home" &&
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300",
+                                  log.workType === "Work from Office" &&
+                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
+                                  log.workType === "Field Work" &&
+                                    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
+                                )}
+                              >
+                                {log.workType || "Unknown"}
+                              </span>
+                              {log.clockOut ? (
+                                <span className="text-xs font-medium text-green-600">
+                                  Completed
+                                </span>
+                              ) : (
+                                <span className="text-xs font-medium text-amber-600">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            // For Leave: display Type + Status
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-medium">
+                                {log.leaveType}
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded w-fit",
+                                  log.status === "APPROVED"
+                                    ? "bg-green-100 text-green-700"
+                                    : log.status === "REJECTED"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                                )}
+                              >
+                                {log.status}
+                              </span>
+                            </div>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="font-medium text-slate-700 dark:text-slate-300">
+                          {isAttendance ? (
+                            <div className="flex flex-col text-xs gap-1">
+                              <div className="flex items-center gap-1.5 text-green-600">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  In:{" "}
+                                  {log.clockIn
+                                    ? format(new Date(log.clockIn), "HH:mm")
+                                    : "-"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-amber-600">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  Out:{" "}
+                                  {log.clockOut
+                                    ? format(new Date(log.clockOut), "HH:mm")
+                                    : "-"}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500">
+                              {log.totalLeaveDays} days
+                            </div>
+                          )}
+                        </TableCell>
+
+                        {/* Working Hours Columns */}
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                          {isAttendance
+                            ? log.workingHours?.toFixed(2) + " h"
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                          {isAttendance
+                            ? log.pauseHours?.toFixed(2) + " h"
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                          {isAttendance
+                            ? log.overtimeHours?.toFixed(2) + " h"
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-slate-900 dark:text-slate-100">
+                          {isAttendance
+                            ? log.totalWorkingHours?.toFixed(2) + " h"
+                            : "-"}
+                        </TableCell>
+
+                        <TableCell className="max-w-[200px] truncate text-slate-600 dark:text-slate-400 text-sm">
+                          {isAttendance
+                            ? log.activities || "-"
+                            : log.requestReason || "-"}
+                        </TableCell>
+
+                        <TableCell className="text-slate-500">
+                          {isAttendance && log.latClockIn && log.lngClockIn ? (
+                            <div
+                              className="flex items-center gap-1 text-xs cursor-help"
+                              title={`In: ${log.latClockIn}, ${log.lngClockIn}`}
+                            >
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span className="hidden xl:inline">Map</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

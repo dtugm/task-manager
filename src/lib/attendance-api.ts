@@ -1,6 +1,7 @@
 import {
   ApiResponse,
   AttendanceLog,
+  AttendanceLogItem,
   ClockInPayload,
   ClockOutPayload,
 } from "@/types/attendance";
@@ -106,26 +107,32 @@ export const attendanceApi = {
     workType?: string,
     role?: string,
     startDate?: string,
-    endDate?: string
-  ): Promise<ApiResponse<{ data: AttendanceLog[]; pagination: any }>> => {
+    endDate?: string,
+    projectId?: string,
+    type?: string,
+    status?: string
+  ): Promise<
+    ApiResponse<{ attendanceLogs: AttendanceLogItem[]; pagination: any }>
+  > => {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
 
-    if (search) params.append("search", search); // Assumes backend supports 'search' for name/email
+    if (search) params.append("search", search);
     if (workType && workType !== "all") params.append("workType", workType);
     if (role && role !== "all") params.append("role", role);
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
+    if (projectId && projectId !== "all") params.append("projectId", projectId);
+    if (type && type !== "all") params.append("type", type);
+    if (status && status !== "all") params.append("status", status);
 
-    return fetcher<ApiResponse<{ data: AttendanceLog[]; pagination: any }>>(
-      `/attendance-log?${params.toString()}`,
-      token,
-      {
-        method: "GET",
-      }
-    );
+    return fetcher<
+      ApiResponse<{ attendanceLogs: AttendanceLogItem[]; pagination: any }>
+    >(`/attendance-log/all?${params.toString()}`, token, {
+      method: "GET",
+    });
   },
 
   createLeaveRequest: async (
