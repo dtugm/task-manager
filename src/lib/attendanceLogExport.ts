@@ -89,7 +89,7 @@ export const exportAttendanceLogs = async ({
             "Overtime Hours": log.overtimeHours?.toFixed(2) || "0",
             "Total Working Hours": log.totalWorkingHours?.toFixed(2) || "0",
             Activities: log.activities || "-",
-            Location: `(${log.latClockIn}, ${log.lngClockIn})`,
+            Location: `(${log.latClockIn}, ${log.longClockIn})`,
           };
         } else {
           return {

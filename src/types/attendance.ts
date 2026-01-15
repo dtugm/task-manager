@@ -1,14 +1,14 @@
 export interface ClockInPayload {
   clockIn: string;
   latClockIn: number;
-  lngClockIn: number;
+  longClockIn: number;
   workType: "Work from Office" | "Work from Home" | "Field Work";
 }
 
 export interface ClockOutPayload {
   clockOut: string;
   latClockOut: number;
-  lngClockOut: number;
+  longClockOut: number;
   activities: string;
 }
 
@@ -55,7 +55,7 @@ export interface AttendanceItem extends BaseLog {
   workType: string;
   clockIn: string | null;
   clockOut: string | null;
-  lngClockIn: number | null;
+  longClockIn: number | null;
   latClockIn: number | null;
   activities: string | null;
   pauseHours: number;
@@ -90,9 +90,9 @@ export interface AttendanceLog {
   clockIn: string;
   clockOut: string | null;
   latClockIn: number;
-  lngClockIn: number;
+  longClockIn: number;
   latClockOut: number | null;
-  lngClockOut: number | null;
+  longClockOut: number | null;
   activities: string | null;
   availability: boolean;
   date: string;

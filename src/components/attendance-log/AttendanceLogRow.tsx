@@ -148,10 +148,10 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
 
       {/* Location */}
       <TableCell className="text-slate-500">
-        {isAttendance && log.latClockIn && log.lngClockIn ? (
+        {isAttendance && log.latClockIn && log.longClockIn ? (
           <div
             className="flex items-center gap-1 text-xs cursor-help"
-            title={`In: ${log.latClockIn}, ${log.lngClockIn}`}
+            title={`In: ${log.latClockIn}, ${log.longClockIn}`}
           >
             <MapPin className="h-3.5 w-3.5" />
             <span className="hidden xl:inline">Map</span>
