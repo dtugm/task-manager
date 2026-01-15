@@ -465,7 +465,7 @@ export default function AttendancePage() {
                 </div>
                 {isClockedIn && (
                   <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                    <span className="font-medium">Working: </span>
+                    <span className="font-medium">Working hours: </span>
                     <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
                       {getWorkingHours()}
                     </span>
