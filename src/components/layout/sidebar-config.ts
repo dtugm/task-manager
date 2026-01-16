@@ -11,6 +11,7 @@ import {
   ClipboardClock,
   Route,
   FolderKanban,
+  Users,
 } from "lucide-react";
 
 export const getNavigation = (t: any) => [
@@ -49,6 +50,11 @@ export const getNavigation = (t: any) => [
     name: t.taskManagerMgr,
     href: "/task-manager",
     icon: FolderKanban,
+  },
+  {
+    name: t.userStats,
+    href: "/user-stats",
+    icon: Users,
   },
 
   { name: t.myTask, href: "/my-task", icon: Tag },

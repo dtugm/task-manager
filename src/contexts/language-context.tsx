@@ -14,6 +14,7 @@ type Translations = {
   projectMgmt: string;
   taskManagerMgr: string;
   taskManagerSpv: string;
+  userStats: string;
   myTask: string;
   search: string;
   language: string;
@@ -255,6 +256,7 @@ const translations: Record<Language, Translations> = {
     projectMgmt: "Project Management",
     taskManagerMgr: "Task Manager ",
     taskManagerSpv: "Task Manager (Supervisor)",
+    userStats: "User Stats",
     myTask: "My Tasks",
     pathAccess: "Path Access",
     leaveApprovals: "Leave Approvals",
@@ -495,6 +497,7 @@ const translations: Record<Language, Translations> = {
     projectMgmt: "Manajemen Proyek",
     taskManagerMgr: "Manajer Tugas",
     taskManagerSpv: "Manajer Tugas (Supervisor)",
+    userStats: "Statistik Pengguna",
     myTask: "Tugas Saya",
     pathAccess: "Akses Halaman",
     leaveApprovals: "Perizinan",
