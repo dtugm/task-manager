@@ -25,6 +25,8 @@ interface ManagerTaskFiltersProps {
   setFilterPriority: (value: string) => void;
   filterStatus: string;
   setFilterStatus: (value: string) => void;
+  filterQuest?: string;
+  setFilterQuest?: (value: string) => void;
   projects: Project[];
 }
 
@@ -41,6 +43,8 @@ export function ManagerTaskFilters({
   setFilterPriority,
   filterStatus,
   setFilterStatus,
+  filterQuest,
+  setFilterQuest,
   projects,
 }: ManagerTaskFiltersProps) {
   const { t } = useLanguage();
@@ -156,6 +160,23 @@ export function ManagerTaskFilters({
               <SelectItem value="pending">{t.pending}</SelectItem>
               <SelectItem value="in-progress">{t.inProgress}</SelectItem>
               <SelectItem value="completed">{t.completed}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Quest Filter */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">
+            Quest
+          </label>
+          <Select value={filterQuest} onValueChange={setFilterQuest}>
+            <SelectTrigger className="bg-white/60 dark:bg-slate-800/60 border-transparent focus:border-purple-500/50 focus:bg-white dark:focus:bg-slate-800 shadow-sm rounded-xl h-10 transition-all font-medium text-sm">
+              <SelectValue placeholder="All Quests" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
+              <SelectItem value="all">All Quests</SelectItem>
+              <SelectItem value="main">Main</SelectItem>
+              <SelectItem value="side">Side</SelectItem>
             </SelectContent>
           </Select>
         </div>

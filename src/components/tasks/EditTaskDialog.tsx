@@ -79,6 +79,7 @@ export function EditTaskDialog({
     description: "",
     points: 0,
     priority: "MEDIUM",
+    quest: "main",
     dueDate: "",
     projectId: "", // Add projectId
     assigneeIds: [],
@@ -100,22 +101,38 @@ export function EditTaskDialog({
     setAssignableUsers(managers);
   }
 
+  // Track previous state to strictly control when to reset
+  const prevOpenRef = useRef(open);
+  const prevTaskIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (task) {
+    const hasOpenChanged = open !== prevOpenRef.current;
+    const hasTaskChanged = task?.id !== prevTaskIdRef.current;
+
+    // Update refs for next run
+    prevOpenRef.current = open;
+    prevTaskIdRef.current = task?.id || null;
+
+    // Only reset/init if dialog just opened OR task ID changed
+    // AND we have a task and are open
+    if (open && task && (hasOpenChanged || hasTaskChanged)) {
       setFormData({
         title: task.title,
         description: task.description,
         points: task.points,
         priority: task.priority,
+        quest: task.quest || "main",
         dueDate: task.dueDate ? toWIB(task.dueDate) : "",
         projectId: task.project?.id || task.projectId || "", // Init projectId
         assigneeIds: task.assigneeIds || [],
       });
 
       if (task.assignees && task.assignees.length > 0) {
-        setSelectedManagers(
-          task.assignees.map((a) => a.assignee as unknown as Manager)
-        );
+        // Ensure we handle potential data structure issues and have valid IDs
+        const validManagers = task.assignees
+          .map((a) => a.assignee as unknown as Manager)
+          .filter((m) => m && m.id);
+        setSelectedManagers(validManagers);
       } else {
         setSelectedManagers([]);
       }
@@ -128,14 +145,18 @@ export function EditTaskDialog({
         } as Project);
         setProjectSearch(task.project.name);
       } else if (task.projectId) {
+        // Try to find in currently loaded projects
         const found = projects.find((p) => p.id === task.projectId);
         if (found) {
           setSelectedProject(found);
           setProjectSearch(found.name);
         }
+      } else {
+        setSelectedProject(null);
+        setProjectSearch("");
       }
     }
-  }, [task, projects]);
+  }, [task, projects, open]);
 
   // Click outside logic
   useEffect(() => {
@@ -169,14 +190,29 @@ export function EditTaskDialog({
 
     setIsSubmitting(true);
     try {
+      // Calculate removed assignees
+      const originalAssigneeIds =
+        task.assignees?.map((a) => a.assignee.id) || [];
+      const currentAssigneeIds = selectedManagers.map((m) => m.id);
+
+      const removedIds = originalAssigneeIds.filter(
+        (id) => !currentAssigneeIds.includes(id)
+      );
+
+      // If there are removed assignees, call the unassign endpoint explicitly
+      if (removedIds.length > 0) {
+        await taskApi.unassignTask(token, task.id, removedIds);
+      }
+
       const updateData: UpdateTaskRequest = {
         title: formData.title,
         description: formData.description,
         points: formData.points,
         priority: formData.priority,
+        quest: formData.quest,
         dueDate: fromWIB(formData.dueDate || ""),
         projectId: formData.projectId,
-        assigneeIds: selectedManagers.map((m) => m.id),
+        assigneeIds: currentAssigneeIds,
       };
 
       const response = await taskApi.updateTask(token, task.id, updateData);
@@ -232,7 +268,7 @@ export function EditTaskDialog({
               className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl resize-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t.totalPoints}
@@ -263,6 +299,25 @@ export function EditTaskDialog({
                   <SelectItem value="LOW">{t.low}</SelectItem>
                   <SelectItem value="MEDIUM">{t.medium}</SelectItem>
                   <SelectItem value="HIGH">{t.high}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Quest
+              </Label>
+              <Select
+                value={formData.quest}
+                onValueChange={(value: "main" | "side") =>
+                  setFormData({ ...formData, quest: value })
+                }
+              >
+                <SelectTrigger className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 shadow-lg">
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="side">Side</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -379,7 +434,7 @@ export function EditTaskDialog({
                             token,
                             organizationId,
                             1,
-                            20,
+                            200,
                             value
                           );
 

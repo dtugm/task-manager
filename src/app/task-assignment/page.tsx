@@ -99,6 +99,7 @@ export default function TaskAssignmentPage() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
 
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterQuest, setFilterQuest] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("");
 
   // Fetch tasks
@@ -380,6 +381,10 @@ export default function TaskAssignmentPage() {
       if (task.status !== filterStatus) return false;
     }
 
+    if (filterQuest !== "all") {
+      if (task.quest !== filterQuest) return false;
+    }
+
     if (filterAssignee) {
       const lowerAssignee = filterAssignee.toLowerCase();
       const hasMatch = task.assignees?.some((a) =>
@@ -490,6 +495,8 @@ export default function TaskAssignmentPage() {
           setFilterPriority={setFilterPriority}
           filterStatus={filterStatus}
           setFilterStatus={setFilterStatus}
+          filterQuest={filterQuest}
+          setFilterQuest={setFilterQuest}
           filterAssignee={filterAssignee}
           setFilterAssignee={setFilterAssignee}
           projects={projects}
@@ -499,6 +506,7 @@ export default function TaskAssignmentPage() {
             setFilterProject("all");
             setFilterPriority("all");
             setFilterStatus("all");
+            setFilterQuest("all");
             setFilterAssignee("");
           }}
         />

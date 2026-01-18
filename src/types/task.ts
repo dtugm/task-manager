@@ -4,6 +4,7 @@ export interface Task {
   description: string;
   points: number;
   priority: "LOW" | "MEDIUM" | "HIGH";
+  quest: "main" | "side";
   progress: number;
   status?: string;
   dueDate: string;
@@ -46,6 +47,7 @@ export interface CreateTaskRequest {
   description: string;
   points: number;
   priority: "LOW" | "MEDIUM" | "HIGH";
+  quest: "main" | "side";
   dueDate: string;
   projectId: string;
   assigneeIds: string[];
@@ -57,6 +59,7 @@ export interface UpdateTaskRequest {
   description?: string;
   points?: number;
   priority?: "LOW" | "MEDIUM" | "HIGH";
+  quest?: "main" | "side";
   progress?: number;
   dueDate?: string;
   assigneeIds?: string[];

@@ -205,6 +205,18 @@ export function ManagerTaskCard({
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                   variant="outline"
+                  className={`border-0 font-semibold uppercase tracking-wide text-[10px] px-1.5 py-0 h-5 ${
+                    (task.quest || "main") === "main"
+                      ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                  }`}
+                >
+                  {(task.quest || "main") === "main"
+                    ? "Main Quest"
+                    : "Side Quest"}
+                </Badge>
+                <Badge
+                  variant="outline"
                   className={`${getPriorityColor(
                     task.priority
                   )} border-0 font-semibold`}

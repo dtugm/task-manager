@@ -23,6 +23,8 @@ interface TaskFiltersProps {
   setFilterPriority: (value: string) => void;
   filterStatus: string;
   setFilterStatus: (value: string) => void;
+  filterQuest?: string;
+  setFilterQuest?: (value: string) => void;
   filterAssignee: string;
   setFilterAssignee: (value: string) => void;
   projects: Project[];
@@ -40,6 +42,8 @@ export function TaskFilters({
   setFilterPriority,
   filterStatus,
   setFilterStatus,
+  filterQuest,
+  setFilterQuest,
   filterAssignee,
   setFilterAssignee,
   projects,
@@ -136,6 +140,20 @@ export function TaskFilters({
                   </SelectItem>
                   <SelectItem value="ACCEPTED">Accepted</SelectItem>
                   <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Quest */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Quest</Label>
+              <Select value={filterQuest} onValueChange={setFilterQuest}>
+                <SelectTrigger className="h-8 bg-background">
+                  <SelectValue placeholder="All Quests" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Quests</SelectItem>
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="side">Side</SelectItem>
                 </SelectContent>
               </Select>
             </div>

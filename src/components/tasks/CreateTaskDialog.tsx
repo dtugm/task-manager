@@ -73,6 +73,7 @@ export function CreateTaskDialog({
     description: "",
     points: 0,
     priority: "MEDIUM",
+    quest: "main",
     dueDate: "",
     projectId: "",
     assigneeIds: [],
@@ -123,6 +124,7 @@ export function CreateTaskDialog({
       description: "",
       points: 0,
       priority: "MEDIUM",
+      quest: "main",
       dueDate: "",
       projectId: "",
       assigneeIds: [],
@@ -199,7 +201,7 @@ export function CreateTaskDialog({
               className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl resize-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t.totalPoints}
@@ -230,6 +232,25 @@ export function CreateTaskDialog({
                   <SelectItem value="LOW">{t.low}</SelectItem>
                   <SelectItem value="MEDIUM">{t.medium}</SelectItem>
                   <SelectItem value="HIGH">{t.high}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Quest
+              </Label>
+              <Select
+                value={formData.quest}
+                onValueChange={(value: "main" | "side") =>
+                  setFormData({ ...formData, quest: value })
+                }
+              >
+                <SelectTrigger className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 shadow-lg">
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="side">Side</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -359,7 +380,7 @@ export function CreateTaskDialog({
                               token,
                               organizationId,
                               1,
-                              20,
+                              200,
                               value
                             );
 

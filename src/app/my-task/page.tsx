@@ -28,6 +28,7 @@ export default function MyTasksPage() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterQuest, setFilterQuest] = useState<string>("all");
 
   // Apply filters to tasks
   const filteredTasks = useMemo(() => {
@@ -74,6 +75,11 @@ export default function MyTasksPage() {
         if (filterStatus === "completed" && task.progress !== 100) return false;
       }
 
+      // Filter by quest
+      if (filterQuest !== "all") {
+        if (task.quest !== filterQuest) return false;
+      }
+
       return true;
     });
   }, [
@@ -84,6 +90,7 @@ export default function MyTasksPage() {
     filterProject,
     filterPriority,
     filterStatus,
+    filterQuest,
   ]);
 
   return (
@@ -139,6 +146,8 @@ export default function MyTasksPage() {
             setFilterPriority={setFilterPriority}
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
+            filterQuest={filterQuest}
+            setFilterQuest={setFilterQuest}
             projects={projects}
           />
 

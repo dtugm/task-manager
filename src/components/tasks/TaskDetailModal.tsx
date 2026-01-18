@@ -194,6 +194,19 @@ export function TaskDetailModal({
             <Badge
               variant="outline"
               className={`
+                border-0 rounded-lg px-2.5 py-1 font-medium uppercase tracking-wide
+                ${
+                  (task.quest || "main") === "main"
+                    ? "bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400"
+                    : "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400"
+                }
+              `}
+            >
+              {(task.quest || "main") === "main" ? "Main Quest" : "Side Quest"}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={`
                 border-0 rounded-lg px-2.5 py-1 font-medium
                 ${
                   task.priority === "HIGH"

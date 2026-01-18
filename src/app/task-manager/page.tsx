@@ -48,6 +48,7 @@ export default function TaskManagerForManagerPage() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterQuest, setFilterQuest] = useState<string>("all");
 
   const handleDeleteTask = async () => {
     if (!taskToDelete) return;
@@ -129,6 +130,10 @@ export default function TaskManagerForManagerPage() {
         if (filterStatus === "completed" && task.progress !== 100) return false;
       }
 
+      if (filterQuest !== "all") {
+        if (task.quest !== filterQuest) return false;
+      }
+
       return true;
     });
   }, [
@@ -139,6 +144,7 @@ export default function TaskManagerForManagerPage() {
     filterProject,
     filterPriority,
     filterStatus,
+    filterQuest,
   ]);
 
   const toggleExpand = (taskId: string) => {
@@ -240,6 +246,8 @@ export default function TaskManagerForManagerPage() {
             setFilterPriority={setFilterPriority}
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
+            filterQuest={filterQuest}
+            setFilterQuest={setFilterQuest}
             projects={projects}
           />
 
