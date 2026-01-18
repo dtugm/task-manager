@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Search, Globe, Moon, Sun, LogOut } from "lucide-react";
+import { Moon, Sun, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "./Sidebar";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/language-context";
@@ -19,6 +18,7 @@ import {
 import { authApi } from "@/lib/auth-api";
 import { UserContext } from "@/types/auth";
 import { clearTokens } from "@/lib/token-utils";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function Header() {
   const { setTheme, theme } = useTheme();
@@ -102,6 +102,8 @@ export function Header() {
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
+
+          <NotificationBell />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
