@@ -12,6 +12,10 @@ import {
   Route,
   FolderKanban,
   Users,
+  Calendar,
+  ClipboardCheck,
+  ClockFading,
+  ClockCheck,
 } from "lucide-react";
 
 export const getNavigation = (t: any) => [
@@ -22,7 +26,18 @@ export const getNavigation = (t: any) => [
     icon: Route,
   },
   { name: t.attendance, href: "/attendance", icon: Clock },
+
   { name: t.attendanceLog, href: "/attendance-log", icon: ClipboardClock },
+  {
+    name: t.pauseovertime,
+    href: "/pause-and-overtime",
+    icon: ClockFading,
+  },
+  {
+    name: t.overtimeapproval,
+    href: "/overtime-approval",
+    icon: ClockCheck,
+  },
   {
     name: t.leaveApprovals,
     href: "/leave-approvals",
@@ -45,16 +60,17 @@ export const getNavigation = (t: any) => [
     href: "/organization-management",
     icon: Building2,
   },
+  {
+    name: t.userStats,
+    href: "/user-stats",
+    icon: Users,
+  },
+
   { name: t.taskAssignment, href: "/task-assignment", icon: CheckSquare },
   {
     name: t.taskManagerMgr,
     href: "/task-manager",
     icon: FolderKanban,
-  },
-  {
-    name: t.userStats,
-    href: "/user-stats",
-    icon: Users,
   },
 
   { name: t.myTask, href: "/my-task", icon: Tag },

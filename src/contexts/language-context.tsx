@@ -23,6 +23,8 @@ type Translations = {
   logout: string;
   pathAccess: string;
   leaveApprovals: string;
+  pauseovertime: string;
+  overtimeapproval: string;
 
   // Dashboard
   welcome: string;
@@ -277,6 +279,8 @@ const translations: Record<Language, Translations> = {
     keepItUp: "Keep it up",
     letsDoIt: "Let's do it",
     project: "Project",
+    pauseovertime: "Pause & Overtime",
+    overtimeapproval: "Overtime Approvals",
 
     // Attendance
     clockIn: "Clock In",
@@ -501,6 +505,8 @@ const translations: Record<Language, Translations> = {
     myTask: "Tugas Saya",
     pathAccess: "Akses Halaman",
     leaveApprovals: "Perizinan",
+    pauseovertime: "Pause & Lembur",
+    overtimeapproval: "Setujui Lembur",
     search: "Cari...",
     language: "Bahasa",
     theme: "Tema",
