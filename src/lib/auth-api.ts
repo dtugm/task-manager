@@ -10,7 +10,9 @@ import {
 
 // ... imports
 
-const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "https://internal-service-production.up.railway.app/api/v1";
 
 async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
