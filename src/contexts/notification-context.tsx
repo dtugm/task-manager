@@ -44,10 +44,13 @@ export function NotificationProvider({
     const token = Cookies.get("accessToken");
     if (!token) return;
 
-    const socketInstance = io("http://localhost:8000/notifications", {
-      auth: { token },
-      transports: ["websocket", "polling"],
-    });
+    const socketInstance = io(
+      `${process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL}/notifications`,
+      {
+        auth: { token },
+        transports: ["websocket", "polling"],
+      }
+    );
 
     socketInstance.on("connect", () => {
       console.log("✅ Notifications WebSocket connected");
