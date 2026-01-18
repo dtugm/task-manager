@@ -137,8 +137,10 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
   if (!userRole) return null;
 
   // Unassigned check for render
-  if (userRole === "Unassigned" && pathname !== "/waiting-approval")
+  if (userRole === "Unassigned") {
+    if (pathname === "/waiting-approval") return <>{children}</>;
     return null;
+  }
 
   // Super Admin / Dashboard - Render
   if (userRole === "Super Admin" || pathname === "/") return <>{children}</>;
