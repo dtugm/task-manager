@@ -5,6 +5,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/language-context";
 import { TokenRefreshProvider } from "@/components/auth/TokenRefreshProvider";
+import { NotificationProvider } from "@/contexts/notification-context";
+import { Toaster } from "sonner";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -34,9 +36,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LanguageProvider>
-            <TokenRefreshProvider>
-              <AppShell>{children}</AppShell>
-            </TokenRefreshProvider>
+            <NotificationProvider>
+              <TokenRefreshProvider>
+                <AppShell>{children}</AppShell>
+                <Toaster position="top-right" />
+              </TokenRefreshProvider>
+            </NotificationProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

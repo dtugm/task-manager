@@ -1,16 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, Loader2, ListTodo, RefreshCw, Plus } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { EditTaskDialog } from "@/components/tasks/EditTaskDialog";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
 import { ExecutiveTaskStats } from "@/components/tasks/ExecutiveTaskStats";
 import { ManagerTaskFilters } from "@/components/tasks/ManagerTaskFilters";
-import { ExecutiveTaskCard } from "@/components/tasks/ExecutiveTaskCard";
 import { ManagerTaskCard } from "@/components/tasks/ManagerTaskCard";
 import { useLanguage } from "@/contexts/language-context";
 import { taskApi } from "@/lib/task-api";
@@ -19,10 +18,12 @@ import { useManagerTasks } from "@/hooks/useManagerTasks";
 
 export default function TaskManagerForManagerPage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
 
   // Custom Hook for Data Fetching
   const {
     executiveTasks,
+    allTasks,
     projects,
     supervisors,
     isLoading,
@@ -77,6 +78,42 @@ export default function TaskManagerForManagerPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Handle opening task from notification
+  useEffect(() => {
+    const taskId = searchParams.get("taskId");
+    if (taskId && allTasks.length > 0) {
+      // First check if task exists in already fetched tasks
+      const taskFromList = allTasks.find((t) => t.id === taskId);
+
+      if (taskFromList) {
+        setSelectedTask(taskFromList);
+        setIsDetailOpen(true);
+      } else {
+        // Task not in list, fetch it individually
+        const match = document.cookie.match(
+          new RegExp("(^| )accessToken=([^;]+)")
+        );
+        const token = match ? match[2] : null;
+
+        if (token) {
+          taskApi
+            .getTask(token, taskId)
+            .then((response) => {
+              if (response.success && response.data) {
+                setSelectedTask(response.data);
+                setIsDetailOpen(true);
+              } else {
+                console.error("Failed to fetch task from notification");
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to fetch task from notification", err);
+            });
+        }
+      }
+    }
+  }, [searchParams, allTasks]);
 
   // Memoized filtered tasks
   const filteredTasks = useMemo(() => {

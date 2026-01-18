@@ -7,7 +7,9 @@ import {
   CreatedTasksSummaryResponse,
 } from "@/types/task";
 
-const BASE_URL = "https://internal-service-production.up.railway.app/api/v1";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "https://internal-service-production.up.railway.app/api/v1";
 
 async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers = {
@@ -31,6 +33,15 @@ async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const taskApi = {
+  getTask: async (token: string, id: string): Promise<ApiResponse<Task>> => {
+    return fetcher<ApiResponse<Task>>(`/tasks/${id}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
   getTasks: async (
     token: string,
     page: number = 1,
