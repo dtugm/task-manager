@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -54,27 +55,30 @@ export default function Home() {
       <WelcomeBanner user={user} stats={stats} />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title={t.totalTasks}
-          value={stats.totalTasks.toString()}
-          subtitle={t.inProgress}
-          icon={Briefcase}
-          iconClassName="bg-[#0077FF]/10 text-[#0077FF]"
-          trendUp={true}
-          trend="↗"
-        />
-        <StatsCard
-          title={t.myTask}
-          value={stats.myTasksCount.toString()}
-          icon={CheckSquare}
-          iconClassName="bg-[#F1677C]/10 text-[#F1677C]"
-        />
-        <StatsCard
-          title={t.projectMgmt}
-          value={stats.totalProjects.toString()}
-          icon={Folder}
-          iconClassName="bg-[#FFB200]/10 text-[#FFB200]"
-        />
+        <Link href="/task-assignment" className="block">
+          <StatsCard
+            title={t.totalTasks}
+            value={stats.totalTasks.toString()}
+            icon={Briefcase}
+            iconClassName="bg-[#0077FF]/10 text-[#0077FF]"
+          />
+        </Link>
+        <Link href="/my-task" className="block">
+          <StatsCard
+            title={t.myTask}
+            value={stats.myTasksCount.toString()}
+            icon={CheckSquare}
+            iconClassName="bg-[#F1677C]/10 text-[#F1677C]"
+          />
+        </Link>
+        <Link href="/project-management" className="block">
+          <StatsCard
+            title={t.projectMgmt}
+            value={stats.totalProjects.toString()}
+            icon={Folder}
+            iconClassName="bg-[#FFB200]/10 text-[#FFB200]"
+          />
+        </Link>
         <div className="bg-gradient-to-br from-[#0C426A] to-[#0077FF] rounded-xl p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
             <TrendingUp className="h-24 w-24" />

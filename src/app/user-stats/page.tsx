@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Users } from "lucide-react";
+import { RefreshCw, Users, Download } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { UserStats } from "@/types/user-stats";
 import { userStatsApi } from "@/lib/user-stats-api";
@@ -9,6 +9,8 @@ import { UserStatsFilters } from "@/components/user-stats/UserStatsFilters";
 import { UserStatsCard } from "@/components/user-stats/UserStatsCard";
 import { Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function UserStatsPage() {
   const { t } = useLanguage();
@@ -93,6 +95,41 @@ export default function UserStatsPage() {
     });
   }, [users, filterSearch, filterRole, sortBy]);
 
+  const handleExport = async () => {
+    if (filteredUsers.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    try {
+      const XLSX = await import("xlsx");
+
+      const exportData = filteredUsers.map((user) => ({
+        Name: user.fullName,
+        Username: user.username,
+        Role: user.role,
+        "Total Tasks": user.totalTasks,
+        Points: user.totalPoints,
+        "Approved Tasks": user.approved.count,
+        "Pending Tasks": user.pending.count,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "User Stats");
+
+      const fileName = `user_stats_${format(
+        new Date(),
+        "yyyyMMdd_HHmmss"
+      )}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      toast.success("Export successful");
+    } catch (error) {
+      console.error("Export failed", error);
+      toast.error("Failed to export data");
+    }
+  };
+
   return (
     <div className="relative isolate min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 animate-in fade-in-50 duration-500">
       {/* Blobs Background */}
@@ -115,6 +152,14 @@ export default function UserStatsPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="gap-2 bg-white/50 dark:bg-slate-900/50 border-white/20 hover:bg-white/80 rounded-xl"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
             <Button
               variant="outline"
               size="icon"
