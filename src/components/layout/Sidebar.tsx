@@ -47,14 +47,19 @@ export function Sidebar({ className }: { className?: string }) {
 
   const isExpanded = !isCollapsed || isHovered;
 
-  const navigation = rawNavigation.filter((item) => {
-    if (item.href === "/") return true;
-    if (!userRole) return false;
-    if (userRole === "Super Admin") return true;
+  const navigation = rawNavigation
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.href === "/") return true;
+        if (!userRole) return false;
+        if (userRole === "Super Admin") return true;
 
-    const allowedRoutes = apiAllowedPaths || [];
-    return allowedRoutes.includes(item.href);
-  });
+        const allowedRoutes = apiAllowedPaths || [];
+        return allowedRoutes.includes(item.href);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div
@@ -84,11 +89,11 @@ export function Sidebar({ className }: { className?: string }) {
         </Button>
       </div>
 
-      <div className="space-y-4 py-8 w-full flex flex-col h-full">
-        <div className="px-4">
+      <div className="flex flex-col h-full w-full py-8">
+        <div className="px-4 flex-shrink-0">
           <div
             className={cn(
-              "flex items-center gap-3 mb-10 px-2 transition-all duration-500",
+              "flex items-center gap-3 mb-6 px-2 transition-all duration-500",
               !isExpanded && "justify-center"
             )}
           >
@@ -109,55 +114,69 @@ export function Sidebar({ className }: { className?: string }) {
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link key={item.name} href={item.href}>
-                  <div className="relative group">
-                    {isActive && (
-                      <div
-                        className={cn(
-                          "absolute inset-0 bg-primary/10 rounded-2xl transition-all duration-300",
-                          !isExpanded ? "w-12 mx-auto" : "w-full"
+        <div className="flex-1 overflow-y-auto space-y-4 px-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          {navigation.map((group, groupIndex) => (
+            <div key={groupIndex} className="space-y-2">
+              {isExpanded && group.title && (
+                <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 mt-4 first:mt-0">
+                  {group.title}
+                </h3>
+              )}
+              {!isExpanded && groupIndex > 0 && (
+                <div className="border-t border-border mx-2 my-2" />
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.name} href={item.href}>
+                      <div className="relative group">
+                        {isActive && (
+                          <div
+                            className={cn(
+                              "absolute inset-0 bg-primary/10 rounded-2xl transition-all duration-300",
+                              !isExpanded ? "w-12 mx-auto" : "w-full"
+                            )}
+                          />
                         )}
-                      />
-                    )}
 
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "w-full justify-start gap-4 relative overflow-hidden transition-all duration-300 py-6 hover:bg-transparent z-10",
-                        isActive
-                          ? "text-primary font-semibold"
-                          : "text-muted-foreground group-hover:text-foreground group-hover:bg-muted/50 rounded-2xl",
-                        !isExpanded && "justify-center px-0"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-5 w-5 shrink-0 transition-all duration-300",
-                          isActive && "scale-110 drop-shadow-sm",
-                          !isExpanded && "h-6 w-6"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "whitespace-nowrap transition-all duration-500 text-sm font-medium",
-                          isExpanded
-                            ? "opacity-100 ml-1 translate-x-0"
-                            : "opacity-0 w-0 hidden -translate-x-4"
-                        )}
-                      >
-                        {item.name}
-                      </span>
-                    </Button>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start gap-4 relative overflow-hidden transition-all duration-300 py-6 hover:bg-transparent z-10",
+                            isActive
+                              ? "text-primary font-semibold"
+                              : "text-muted-foreground group-hover:text-foreground group-hover:bg-muted/50 rounded-2xl",
+                            !isExpanded && "justify-center px-0"
+                          )}
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-5 w-5 shrink-0 transition-all duration-300",
+                              isActive && "scale-110 drop-shadow-sm",
+                              !isExpanded && "h-6 w-6"
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "whitespace-nowrap transition-all duration-500 text-sm font-medium",
+                              isExpanded
+                                ? "opacity-100 ml-1 translate-x-0"
+                                : "opacity-0 w-0 hidden -translate-x-4"
+                            )}
+                          >
+                            {item.name}
+                          </span>
+                        </Button>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -190,14 +209,19 @@ export function MobileSidebar() {
     }
   }, [userRole]);
 
-  const navigation = rawNavigation.filter((item) => {
-    if (item.href === "/") return true;
-    if (!userRole) return false;
-    if (userRole === "Super Admin") return true;
+  const navigation = rawNavigation
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.href === "/") return true;
+        if (!userRole) return false;
+        if (userRole === "Super Admin") return true;
 
-    const allowedRoutes = apiAllowedPaths || [];
-    return allowedRoutes.includes(item.href);
-  });
+        const allowedRoutes = apiAllowedPaths || [];
+        return allowedRoutes.includes(item.href);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -207,39 +231,48 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-72">
-        <div className="space-y-4 py-4 h-full bg-sidebar">
-          <div className="px-3 py-2">
+        <div className="space-y-4 py-4 h-full bg-sidebar flex flex-col">
+          <div className="px-3 py-2 flex-shrink-0">
             <h2 className="mb-6 px-4 text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm">
                 G
               </div>
               Geo AIT
             </h2>
-            <div className="space-y-1">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                  >
-                    <Button
-                      variant={isActive ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-2",
-                        isActive
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )}
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            {navigation.map((group, groupIndex) => (
+              <div key={groupIndex} className="space-y-1">
+                {group.title && (
+                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    {group.title}
+                  </h3>
+                )}
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {item.name}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </div>
+                      <Button
+                        variant={isActive ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full justify-start gap-2 mb-1",
+                          isActive
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                            : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </Button>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       </SheetContent>
