@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { useNotifications } from "@/contexts/notification-context";
 import { NotificationItem } from "./notification-item";
 
+import { useRouter } from "next/navigation";
+
 interface NotificationListProps {
   onClose?: () => void;
 }
@@ -15,11 +17,12 @@ interface NotificationListProps {
 export function NotificationList({ onClose }: NotificationListProps) {
   const { notifications, unreadCount, loading, markAllAsRead } =
     useNotifications();
+  const router = useRouter();
 
   return (
-    <div className="flex flex-col h-125">
+    <div className="flex flex-col max-h-[500px]">
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b">
+      <div className="p-4 flex items-center justify-between border-b bg-background sticky top-0 z-10">
         <div>
           <h3 className="font-semibold">Notifications</h3>
           {unreadCount > 0 && (
@@ -55,7 +58,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
       </div>
 
       {/* Notifications List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -66,7 +69,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
             <p className="text-sm">No notifications yet</p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y relative">
             {notifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
@@ -80,21 +83,20 @@ export function NotificationList({ onClose }: NotificationListProps) {
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <>
-          <Separator />
+        <div className="sticky bottom-0 bg-background z-10 border-t">
           <div className="p-2">
             <Button
               variant="ghost"
               className="w-full"
               onClick={() => {
-                // Navigate to all notifications page
+                router.push("/notifications");
                 onClose?.();
               }}
             >
               View all notifications
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
