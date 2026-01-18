@@ -68,7 +68,6 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
 
     // 4. Waiting for Access Data (if needed)
     if (userRole !== "Super Admin" && allowedPaths === null) {
-      // If we haven't started fetching yet or are fetching
       if (!isAccessLoading) setIsAccessLoading(true); // Trigger fetch effect if mostly
       return;
     }
@@ -133,7 +132,6 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Once loaded, if no role, we would have redirected, but return null to be safe
   if (!userRole) return null;
 
   // Unassigned check for render

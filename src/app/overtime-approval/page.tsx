@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { OvertimeApprovalTable } from "@/components/attendance/overtime/OvertimeApprovalTable";
 import { OvertimeApprovalActionDialog } from "@/components/attendance/overtime/OvertimeApprovalActionDialog";
 import { UserSearchSelect } from "@/components/common/UserSearchSelect";
+import { PaginationControls } from "@/components/common/PaginationControls";
 
 export default function OvertimeApprovalPage() {
   const { t } = useLanguage();
@@ -70,6 +71,7 @@ export default function OvertimeApprovalPage() {
     fetchRequests();
   }, [
     pagination.page,
+    pagination.limit,
     filterStartDate,
     filterStatus,
     filterRequesterId,
@@ -97,10 +99,12 @@ export default function OvertimeApprovalPage() {
 
       if (resp.success && resp.data) {
         setRequests(resp.data.data);
+        const total = resp.data.pagination.total;
+        const limit = resp.data.pagination.limit || pagination.limit;
         setPagination({
           ...pagination,
-          total: resp.data.pagination.total,
-          totalPages: resp.data.pagination.pages || 1, // Fallback if pages not returned
+          total: total,
+          totalPages: Math.ceil(total / limit) || 1,
           page: resp.data.pagination.page,
         });
       }
@@ -335,41 +339,17 @@ export default function OvertimeApprovalPage() {
           />
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    page: Math.max(1, prev.page - 1),
-                  }))
-                }
-                disabled={pagination.page === 1 || isLoading}
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    page: Math.min(pagination.totalPages, prev.page + 1),
-                  }))
-                }
-                disabled={
-                  pagination.page === pagination.totalPages || isLoading
-                }
-              >
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+          <PaginationControls
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(page: number) =>
+              setPagination((prev) => ({ ...prev, page }))
+            }
+            itemsPerPage={pagination.limit}
+            onItemsPerPageChange={(limit: number) =>
+              setPagination((prev) => ({ ...prev, limit, page: 1 }))
+            }
+          />
         </div>
       </div>
 

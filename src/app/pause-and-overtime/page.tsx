@@ -32,6 +32,7 @@ import { OvertimeRequestForm } from "@/components/attendance/overtime/OvertimeRe
 import { OvertimeHistoryTable } from "@/components/attendance/overtime/OvertimeHistoryTable";
 import { EditOvertimeDialog } from "@/components/attendance/overtime/EditOvertimeDialog";
 import { DeleteOvertimeDialog } from "@/components/attendance/overtime/DeleteOvertimeDialog";
+import { PaginationControls } from "@/components/common/PaginationControls";
 
 export default function PauseAndOvertimePage() {
   const { t } = useLanguage();
@@ -54,6 +55,12 @@ export default function PauseAndOvertimePage() {
   // Overtime Filters
   const [overtimeDate, setOvertimeDate] = useState("");
   const [overtimeStatus, setOvertimeStatus] = useState("ALL");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
 
   // Clock
   useEffect(() => {
@@ -92,7 +99,7 @@ export default function PauseAndOvertimePage() {
   // Fetch Overtime Requests when filters change
   useEffect(() => {
     fetchOvertimeRequests();
-  }, [overtimeDate, overtimeStatus]);
+  }, [overtimeDate, overtimeStatus, pagination.page, pagination.limit]);
 
   // --- Pause Functions ---
 
@@ -184,13 +191,20 @@ export default function PauseAndOvertimePage() {
     try {
       const resp = await pauseOvertimeApi.getMyOvertimeRequests(
         token,
-        1,
-        1000,
+        pagination.page,
+        pagination.limit,
         overtimeStatus === "ALL" ? undefined : overtimeStatus,
         overtimeDate || undefined
       );
       if (resp.success && resp.data) {
         setOvertimeRequests(resp.data.data);
+        const paginationData = resp.data.pagination;
+        const currentLimit = paginationData.limit || pagination.limit;
+        setPagination((prev) => ({
+          ...prev,
+          total: paginationData.total,
+          totalPages: Math.ceil(paginationData.total / currentLimit) || 1,
+        }));
       }
     } catch (error) {
       console.error("Failed to fetch overtime requests", error);
@@ -213,6 +227,7 @@ export default function PauseAndOvertimePage() {
         "Clock In": format(new Date(req.clockIn), "yyyy-MM-dd HH:mm"),
         "Clock Out": format(new Date(req.clockOut), "yyyy-MM-dd HH:mm"),
         Activities: req.activities,
+        "Approval Note": req.approvalNote || "-",
         Status: req.status,
         "Created At": format(new Date(req.createdAt), "yyyy-MM-dd HH:mm"),
       }));
@@ -474,6 +489,17 @@ export default function PauseAndOvertimePage() {
                     loading={isOvertimeLoading && overtimeRequests.length === 0}
                     onEdit={setEditRequest}
                     onDelete={setDeleteRequestId}
+                  />
+                  <PaginationControls
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    onPageChange={(page) =>
+                      setPagination((prev) => ({ ...prev, page }))
+                    }
+                    itemsPerPage={pagination.limit}
+                    onItemsPerPageChange={(limit) =>
+                      setPagination((prev) => ({ ...prev, limit, page: 1 }))
+                    }
                   />
                 </div>
               </div>
