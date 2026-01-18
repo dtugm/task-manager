@@ -209,6 +209,7 @@ export function useManagerTasks() {
   }, [fetchTasks, fetchProjects, fetchSupervisors]);
 
   return {
+    allTasks,
     executiveTasks,
     projects,
     supervisors,

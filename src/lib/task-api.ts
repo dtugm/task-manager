@@ -33,6 +33,15 @@ async function fetcher<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const taskApi = {
+  getTask: async (token: string, id: string): Promise<ApiResponse<Task>> => {
+    return fetcher<ApiResponse<Task>>(`/tasks/${id}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
   getTasks: async (
     token: string,
     page: number = 1,

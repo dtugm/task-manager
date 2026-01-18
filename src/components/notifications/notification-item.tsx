@@ -2,7 +2,8 @@
 
 import React from "react";
 import { formatDistanceToNow } from "date-fns";
-import { X, FileCheck, FileX, MessageSquare, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, FileCheck, FileX, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Notification, NotificationType } from "@/types/notification";
@@ -21,7 +22,6 @@ const notificationIcons = {
   [NotificationType.TASK_REJECTED]: FileX,
   [NotificationType.TASK_UNASSIGNED]: FileX,
   [NotificationType.TASK_COMMENTED]: MessageSquare,
-  [NotificationType.TASK_DUE_SOON]: Clock,
 };
 
 export function NotificationItem({
@@ -29,16 +29,18 @@ export function NotificationItem({
   onClose,
 }: NotificationItemProps) {
   const { markAsRead, deleteNotification } = useNotifications();
+  const router = useRouter();
   const Icon = notificationIcons[notification.type] || FileCheck;
 
   const handleClick = () => {
+    console.log("handle click");
+    console.log(notification);
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
     // Navigate to resource
-    if (notification.resourceType === "TASK") {
-      // Navigate to task detail page
-      window.location.href = `/task-manager?taskId=${notification.resourceId}`;
+    if (notification.resourceType === "task") {
+      router.push(`/task-manager?taskId=${notification.resourceId}`);
     }
     onClose?.();
   };

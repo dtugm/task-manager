@@ -1,18 +1,15 @@
 export enum NotificationType {
-  TASK_ASSIGNED = "TASK_ASSIGNED",
-  TASK_UNASSIGNED = "TASK_UNASSIGNED",
-  TASK_UPDATED = "TASK_UPDATED",
-  TASK_COMPLETED = "TASK_COMPLETED",
-  TASK_APPROVED = "TASK_APPROVED",
-  TASK_REJECTED = "TASK_REJECTED",
-  TASK_COMMENTED = "TASK_COMMENTED",
-  TASK_DUE_SOON = "TASK_DUE_SOON",
+  TASK_ASSIGNED = "task.assigned",
+  TASK_UNASSIGNED = "task.unassigned",
+  TASK_UPDATED = "task.updated",
+  TASK_COMPLETED = "task.completed",
+  TASK_APPROVED = "task.approved",
+  TASK_REJECTED = "task.rejected",
+  TASK_COMMENTED = "task.commented",
 }
 
 export enum ResourceType {
-  TASK = "TASK",
-  PROJECT = "PROJECT",
-  LEAVE_REQUEST = "LEAVE_REQUEST",
+  TASK = "task",
 }
 
 export interface NotificationUser {
