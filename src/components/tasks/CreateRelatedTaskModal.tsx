@@ -65,11 +65,13 @@ export function CreateRelatedTaskModal({
   const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
 
   // Form State
+  // Form State
   const [formData, setFormData] = useState<CreateTaskRequest>({
     title: "",
     description: "",
     points: 0,
     priority: "MEDIUM",
+    quest: "main",
     dueDate: "",
     projectId: parentProjectId,
     assigneeIds: [],
@@ -172,11 +174,13 @@ export function CreateRelatedTaskModal({
       const response = await taskApi.createTask(token, formData);
       if (response.success) {
         // Reset form
+        // Reset form
         setFormData({
           title: "",
           description: "",
           points: 0,
           priority: "MEDIUM",
+          quest: "main",
           dueDate: "",
           projectId: parentProjectId,
           assigneeIds: [],
@@ -270,6 +274,23 @@ export function CreateRelatedTaskModal({
                   <SelectItem value="LOW">{t.low}</SelectItem>
                   <SelectItem value="MEDIUM">{t.medium}</SelectItem>
                   <SelectItem value="HIGH">{t.high}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label>Quest</Label>
+              <Select
+                value={formData.quest}
+                onValueChange={(value: "main" | "side") =>
+                  setFormData({ ...formData, quest: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="side">Side</SelectItem>
                 </SelectContent>
               </Select>
             </div>
