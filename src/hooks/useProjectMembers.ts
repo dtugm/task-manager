@@ -82,7 +82,7 @@ export function useProjectMembers(projectId: string) {
         token,
         ORGANIZATION_ID,
         1,
-        50
+        200
       );
       let rawData: any = response;
       if (response && (response as any).success && (response as any).data) {

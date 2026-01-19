@@ -317,7 +317,7 @@ export function CreateSubtaskDialog({
                               token,
                               organizationId,
                               1,
-                              20,
+                              200,
                               value
                             );
 
