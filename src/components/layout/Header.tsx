@@ -39,7 +39,7 @@ export function Header() {
 
       // Basic cookie parsing
       const match = document.cookie.match(
-        new RegExp("(^| )accessToken=([^;]+)")
+        new RegExp("(^| )accessToken=([^;]+)"),
       );
       const token = match ? match[2] : null;
 
@@ -118,7 +118,7 @@ export function Header() {
                   <p className="text-xs text-muted-foreground">{userRole}</p>
                 </div>
                 <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-md">
-                  <AvatarImage src="/avatars/john-doe.png" />
+                  {/* <AvatarImage src="/avatars/john-doe.png" /> */}
                   <AvatarFallback className="bg-gradient-to-tr from-violet-500 to-indigo-500 text-white">
                     {userInitials}
                   </AvatarFallback>

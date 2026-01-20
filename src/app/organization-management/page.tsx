@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useLanguage } from "@/contexts/language-context";
 import { organizationApi } from "@/lib/organization-api";
 import { OrganizationWithRole, OrganizationUser } from "@/types/organization";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,7 +39,7 @@ import {
 export default function OrganizationManagementPage() {
   const { t } = useLanguage();
   const [organizations, setOrganizations] = useState<OrganizationWithRole[]>(
-    []
+    [],
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -56,6 +57,8 @@ export default function OrganizationManagementPage() {
   // Filters
   const [roleFilter, setRoleFilter] = useState("All"); // All, Executive, Manager, Supervisor, Employee, Unassigned
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
 
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -64,7 +67,7 @@ export default function OrganizationManagementPage() {
 
   // Action Targets
   const [userToDelete, setUserToDelete] = useState<OrganizationUser | null>(
-    null
+    null,
   );
   const [userToEdit, setUserToEdit] = useState<OrganizationUser | null>(null);
 
@@ -73,7 +76,7 @@ export default function OrganizationManagementPage() {
     setIsLoading(true);
     try {
       const match = document.cookie.match(
-        new RegExp("(^| )accessToken=([^;]+)")
+        new RegExp("(^| )accessToken=([^;]+)"),
       );
       const token = match ? match[2] : null;
       if (!token) return;
@@ -85,7 +88,7 @@ export default function OrganizationManagementPage() {
         if (!selectedOrgId && response.data.length > 0) {
           const active = response.data.find((o) => o.isActive);
           setSelectedOrgId(
-            active ? active.organization.id : response.data[0].organization.id
+            active ? active.organization.id : response.data[0].organization.id,
           );
         }
       }
@@ -113,12 +116,14 @@ export default function OrganizationManagementPage() {
   const fetchOrgUsers = async (
     orgId: string,
     page: number = 1,
-    limit: number = pagination.limit
+    limit: number = rowsPerPage,
+    search: string = debouncedSearchQuery,
   ) => {
+    // console.log("Fetching users with search:", search);
     setIsUsersLoading(true);
     try {
       const match = document.cookie.match(
-        new RegExp("(^| )accessToken=([^;]+)")
+        new RegExp("(^| )accessToken=([^;]+)"),
       );
       const token = match ? match[2] : null;
       if (!token) return;
@@ -127,7 +132,8 @@ export default function OrganizationManagementPage() {
         token,
         orgId,
         page,
-        limit
+        limit,
+        search,
       );
       if (response.success && response.data) {
         setOrgUsers(response.data.users);
@@ -151,6 +157,16 @@ export default function OrganizationManagementPage() {
     }
   };
 
+  useEffect(() => {
+    if (selectedOrgId) {
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      // If searching, fetch "all" (high limit) to ensure we get all results for client-side filtering helper
+      // If server search works, it limits response. If not, we get all and filter locally.
+      const limit = debouncedSearchQuery ? 1000 : rowsPerPage;
+      fetchOrgUsers(selectedOrgId, 1, limit, debouncedSearchQuery);
+    }
+  }, [debouncedSearchQuery, rowsPerPage]);
+
   // Filtered Users
   const filteredUsers = useMemo(() => {
     let result = orgUsers;
@@ -164,14 +180,14 @@ export default function OrganizationManagementPage() {
       }
     }
 
-    // 2. Search Filter
+    // 2. Search Filter - Hybrid approach: Server might return all if it ignores search param, so we filter locally too.
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (u) =>
           u.user.fullName?.toLowerCase().includes(query) ||
           u.user.username.toLowerCase().includes(query) ||
-          u.user.email.toLowerCase().includes(query)
+          u.user.email.toLowerCase().includes(query),
       );
     }
 
@@ -183,7 +199,7 @@ export default function OrganizationManagementPage() {
     if (!userToDelete || !selectedOrgId) return;
     try {
       const match = document.cookie.match(
-        new RegExp("(^| )accessToken=([^;]+)")
+        new RegExp("(^| )accessToken=([^;]+)"),
       );
       const token = match ? match[2] : null;
       if (!token) return;
@@ -191,10 +207,10 @@ export default function OrganizationManagementPage() {
       await organizationApi.removeOrganizationUser(
         token,
         selectedOrgId,
-        userToDelete.user.id
+        userToDelete.user.id,
       );
       setOrgUsers((prev) =>
-        prev.filter((u) => u.user.id !== userToDelete.user.id)
+        prev.filter((u) => u.user.id !== userToDelete.user.id),
       );
       setUserToDelete(null);
     } catch (error) {
@@ -342,16 +358,14 @@ export default function OrganizationManagementPage() {
                   <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                     <span>{t.rowsPerPage}</span>
                     <Select
-                      value={String(pagination.limit)}
+                      value={String(rowsPerPage)}
                       onValueChange={(value) => {
                         const newLimit = Number(value);
+                        setRowsPerPage(newLimit);
                         setPagination((prev) => ({
                           ...prev,
-                          limit: newLimit,
                           page: 1,
                         }));
-                        if (selectedOrgId)
-                          fetchOrgUsers(selectedOrgId, 1, newLimit);
                       }}
                     >
                       <SelectTrigger className="h-8 w-[70px] bg-white/50 dark:bg-slate-900/50">
@@ -381,13 +395,13 @@ export default function OrganizationManagementPage() {
                       {/* Numbered Pagination */}
                       {Array.from(
                         { length: pagination.totalPages },
-                        (_, i) => i + 1
+                        (_, i) => i + 1,
                       )
                         .filter(
                           (p) =>
                             p === 1 ||
                             p === pagination.totalPages ||
-                            Math.abs(p - pagination.page) <= 1
+                            Math.abs(p - pagination.page) <= 1,
                         )
                         .map((p, i, arr) => {
                           // Add ellipses

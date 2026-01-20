@@ -50,7 +50,12 @@ export function useProjectMembers(projectId: string) {
       if (projRes.success) setProject(projRes.data);
       else setError(projRes.error?.message || "Failed to fetch project");
 
-      const memRes = await projectApi.getProjectUsers(token, projectId);
+      const memRes = await projectApi.getProjectUsers(
+        token,
+        projectId,
+        1,
+        1000,
+      );
       if (memRes.success) {
         let rawMembers: any[] = [];
         const data = memRes.data;
@@ -82,7 +87,7 @@ export function useProjectMembers(projectId: string) {
         token,
         ORGANIZATION_ID,
         1,
-        200
+        200,
       );
       let rawData: any = response;
       if (response && (response as any).success && (response as any).data) {
@@ -167,11 +172,11 @@ export function useProjectMembers(projectId: string) {
         token,
         projectId,
         member.userId || member.id,
-        { role: newRole }
+        { role: newRole },
       );
       if (response.success) {
         setMembers((prev) =>
-          prev.map((m) => (m.id === member.id ? { ...m, role: newRole } : m))
+          prev.map((m) => (m.id === member.id ? { ...m, role: newRole } : m)),
         );
         return true;
       } else {
@@ -200,7 +205,7 @@ export function useProjectMembers(projectId: string) {
       const response = await projectApi.removeProjectUser(
         token,
         projectId,
-        member.userId || member.id // Fallback just in case
+        member.userId || member.id, // Fallback just in case
       );
       const isSuccess =
         !response ||
