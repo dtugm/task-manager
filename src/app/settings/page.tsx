@@ -16,7 +16,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, User as UserIcon, Mail, Lock, Settings } from "lucide-react";
+import {
+  Loader2,
+  User as UserIcon,
+  Mail,
+  Lock,
+  Settings,
+  Phone,
+} from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -32,6 +39,7 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
 
   const getToken = () => {
@@ -56,6 +64,7 @@ export default function SettingsPage() {
           setFullName(userData.fullName || "");
           setUsername(userData.username || "");
           setEmail(userData.email || "");
+          setPhoneNumber(userData.phoneNumber || "");
         } else {
           setMessage({
             type: "error",
@@ -90,10 +99,31 @@ export default function SettingsPage() {
       return;
     }
 
+    // Validate Phone Number
+    if (phoneNumber) {
+      if (!/^\d+$/.test(phoneNumber)) {
+        setMessage({
+          type: "error",
+          text: "Phone number must contain only digits.",
+        });
+        setIsSaving(false);
+        return;
+      }
+      if (!phoneNumber.startsWith("628")) {
+        setMessage({
+          type: "error",
+          text: "Phone number must start with 628 (e.g., 628712345678). Do not use 08 or +62.",
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const updateData: UpdateUserData = {
       fullName,
       username,
       email,
+      phoneNumber,
     };
 
     // Only add password if it's not empty
@@ -227,6 +257,64 @@ export default function SettingsPage() {
                   className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <Label
+                htmlFor="phoneNumber"
+                className="text-slate-700 dark:text-slate-300 font-medium"
+              >
+                Phone Number
+              </Label>
+              <div className="relative group">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                <Input
+                  id="phoneNumber"
+                  type="text"
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, ""); // Only allow digits
+
+                    // Auto-replace 08 -> 628 (useful for pasting)
+                    if (val.startsWith("08")) {
+                      val = "628" + val.substring(2);
+                    }
+
+                    // Enforce that it must start with 628 sequence
+                    if (val.length > 0) {
+                      const prefix = "628";
+                      let isValid = true;
+
+                      if (val.length < 3) {
+                        if (!prefix.startsWith(val)) isValid = false;
+                      } else {
+                        if (!val.startsWith("628")) isValid = false;
+                      }
+
+                      if (!isValid) {
+                        setMessage({
+                          type: "error",
+                          text: "Invalid input. Phone number must start with 628.",
+                        });
+                        return;
+                      }
+                    }
+
+                    if (
+                      message?.text.includes("Phone number must start with 628")
+                    ) {
+                      setMessage(null);
+                    }
+
+                    setPhoneNumber(val);
+                  }}
+                  placeholder="628712345678"
+                  className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Format: 628xxxxxxxxxx
+              </p>
             </div>
 
             <div className="space-y-2.5 pt-2">

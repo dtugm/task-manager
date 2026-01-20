@@ -5,6 +5,7 @@ export interface User {
   fullName?: string;
   role?: string;
   organizationId?: string;
+  phoneNumber?: string;
   // Add other user fields as needed based on API response
 }
 
@@ -53,6 +54,7 @@ export interface UpdateUserData {
   username?: string;
   email?: string;
   password?: string;
+  phoneNumber?: string;
 }
 
 export interface ApiResponse<T> {

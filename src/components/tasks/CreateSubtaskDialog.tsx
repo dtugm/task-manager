@@ -161,7 +161,7 @@ export function CreateSubtaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
         <DialogHeader className="border-b border-slate-200/50 pb-4">
           <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             Create Related Task
@@ -291,7 +291,7 @@ export function CreateSubtaskDialog({
 
                     // Fetch users dynamically
                     const match = document.cookie.match(
-                      new RegExp("(^| )accessToken=([^;]+)")
+                      new RegExp("(^| )accessToken=([^;]+)"),
                     );
                     const token = match ? match[2] : null;
 
@@ -309,16 +309,15 @@ export function CreateSubtaskDialog({
                         }
 
                         if (organizationId) {
-                          const { organizationApi } = await import(
-                            "@/lib/organization-api"
-                          );
+                          const { organizationApi } =
+                            await import("@/lib/organization-api");
                           const response =
                             await organizationApi.getOrganizationUsers(
                               token,
                               organizationId,
                               1,
                               200,
-                              value
+                              value,
                             );
 
                           if (response.success && response.data?.users) {
@@ -356,7 +355,7 @@ export function CreateSubtaskDialog({
                           onClick={() => {
                             if (
                               !selectedAssignees.find(
-                                (m) => m.id === assignee.id
+                                (m) => m.id === assignee.id,
                               )
                             ) {
                               const newAssignees = [
@@ -395,7 +394,7 @@ export function CreateSubtaskDialog({
                       className="cursor-pointer bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg px-2 py-1"
                       onClick={() => {
                         const newAssignees = selectedAssignees.filter(
-                          (m) => m.id !== assignee.id
+                          (m) => m.id !== assignee.id,
                         );
                         setSelectedAssignees(newAssignees);
                         setFormData({
