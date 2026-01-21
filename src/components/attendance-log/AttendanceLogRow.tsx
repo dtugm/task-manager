@@ -15,6 +15,7 @@ interface AttendanceLogRowProps {
 export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
   const isAttendance = log.type === "ATTENDANCE";
   const isLeave = log.type === "LEAVE";
+  const isOvertime = log.type === "OVERTIME";
 
   return (
     <TableRow
@@ -38,13 +39,19 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
 
       {/* Type Badge */}
       <TableCell>
-        {isAttendance ? (
+        {isAttendance && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
             Attendance
           </span>
-        ) : (
+        )}
+        {isLeave && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300">
             Leave
+          </span>
+        )}
+        {isOvertime && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+            Overtime
           </span>
         )}
       </TableCell>
@@ -61,7 +68,7 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
                 log.workType === "Work from Office" &&
                   "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
                 log.workType === "Field Work" &&
-                  "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
+                  "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300",
               )}
             >
               {log.workType || "Unknown"}
@@ -74,6 +81,22 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
               <span className="text-xs font-medium text-amber-600">Active</span>
             )}
           </div>
+        ) : isOvertime ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium">Overtime Request</span>
+            <span
+              className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded w-fit",
+                log.status === "APPROVED"
+                  ? "bg-green-100 text-green-700"
+                  : log.status === "REJECTED"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-yellow-100 text-yellow-700",
+              )}
+            >
+              {log.status}
+            </span>
+          </div>
         ) : (
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium">{log.leaveType}</span>
@@ -83,8 +106,8 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
                 log.status === "APPROVED"
                   ? "bg-green-100 text-green-700"
                   : log.status === "REJECTED"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-yellow-100 text-yellow-700"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-yellow-100 text-yellow-700",
               )}
             >
               {log.status}
@@ -95,7 +118,7 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
 
       {/* Times */}
       <TableCell className="font-medium text-slate-700 dark:text-slate-300">
-        {isAttendance ? (
+        {isAttendance || isOvertime ? (
           <div className="flex flex-col text-xs gap-1">
             <div className="flex items-center gap-1.5 text-green-600">
               <Clock className="h-3 w-3" />
@@ -121,8 +144,12 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
       {/* Activities / Reason */}
       <TableCell className="max-w-[200px]">
         <ActivityCell
-          text={isAttendance ? log.activities || "" : log.requestReason || ""}
-          title={isAttendance ? "Activities" : "Request Reason"}
+          text={
+            isAttendance || isOvertime
+              ? log.activities || ""
+              : log.requestReason || ""
+          }
+          title={isAttendance || isOvertime ? "Activities" : "Request Reason"}
         />
       </TableCell>
 
@@ -138,7 +165,9 @@ export const AttendanceLogRow = ({ log, index }: AttendanceLogRowProps) => {
 
       {/* Overtime Hours */}
       <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-        {isAttendance ? log.overtimeHours?.toFixed(2) + " h" : "-"}
+        {isAttendance || isOvertime
+          ? log.overtimeHours?.toFixed(2) + " h"
+          : "-"}
       </TableCell>
 
       {/* Total Working Hours */}

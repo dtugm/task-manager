@@ -30,7 +30,7 @@ export function ExecutiveTaskStats({ tasks }: ExecutiveTaskStatsProps) {
         text: "text-blue-600 dark:text-blue-400",
       },
       {
-        label: t.pendingApproval,
+        label: t.pending,
         value: tasks.filter((t) => t.progress === 0).length,
         icon: AlertCircle,
         gradient: "from-orange-500 to-red-500",
@@ -57,7 +57,7 @@ export function ExecutiveTaskStats({ tasks }: ExecutiveTaskStatsProps) {
         text: "text-green-600 dark:text-green-400",
       },
     ],
-    [tasks, t]
+    [tasks, t],
   );
 
   return (

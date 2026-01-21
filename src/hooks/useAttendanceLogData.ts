@@ -74,11 +74,11 @@ export const useAttendanceLogData = ({
         endDate,
         projectId === "all" ? undefined : projectId,
         recordType === "all" ? undefined : recordType,
-        recordType === "Leave"
+        recordType === "Leave" || recordType === "Overtime"
           ? status === "all"
             ? undefined
             : status
-          : undefined
+          : undefined,
       );
 
       if (response.success && response.data) {
@@ -89,7 +89,7 @@ export const useAttendanceLogData = ({
           const filtered = allData.filter(
             (log) =>
               log.user.name.toLowerCase().includes(searchLower) ||
-              log.user.email.toLowerCase().includes(searchLower)
+              log.user.email.toLowerCase().includes(searchLower),
           );
 
           setTotalItems(filtered.length);
@@ -98,7 +98,7 @@ export const useAttendanceLogData = ({
           const startIndex = (currentPage - 1) * itemsPerPage;
           const paginatedLogs = filtered.slice(
             startIndex,
-            startIndex + itemsPerPage
+            startIndex + itemsPerPage,
           );
           setLogs(paginatedLogs);
         } else {

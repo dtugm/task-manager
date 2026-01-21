@@ -81,7 +81,17 @@ export interface LeaveItem extends BaseLog {
   approvalNote: string | null;
 }
 
-export type AttendanceLogItem = AttendanceItem | LeaveItem;
+export interface OvertimeItem extends BaseLog {
+  type: "OVERTIME";
+  clockIn: string;
+  clockOut: string;
+  activities: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  approvalNote: string | null;
+  overtimeHours?: number;
+}
+
+export type AttendanceLogItem = AttendanceItem | LeaveItem | OvertimeItem;
 
 // Keeping existing AttendanceLog for other parts of the app for now,
 // though we might want to consolidate eventually.

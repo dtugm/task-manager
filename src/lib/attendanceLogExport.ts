@@ -45,11 +45,11 @@ export const exportAttendanceLogs = async ({
       endDate,
       projectId === "all" ? undefined : projectId,
       recordType === "all" ? undefined : recordType,
-      recordType === "Leave"
+      recordType === "Leave" || recordType === "Overtime"
         ? status === "all"
           ? undefined
           : status
-        : undefined
+        : undefined,
     );
 
     if (response.success && response.data?.attendanceLogs) {
@@ -61,7 +61,7 @@ export const exportAttendanceLogs = async ({
         logsToExport = logsToExport.filter(
           (log) =>
             log.user.name.toLowerCase().includes(searchLower) ||
-            log.user.email.toLowerCase().includes(searchLower)
+            log.user.email.toLowerCase().includes(searchLower),
         );
       }
 
@@ -90,6 +90,28 @@ export const exportAttendanceLogs = async ({
             "Total Working Hours": log.totalWorkingHours?.toFixed(2) || "0",
             Activities: log.activities || "-",
             Location: `(${log.latClockIn}, ${log.longClockIn})`,
+          };
+        } else if (log.type === "OVERTIME") {
+          return {
+            Type: "Overtime",
+            Employee: log.user.name,
+            Email: log.user.email,
+            Date: format(new Date(log.date), "dd MMM yyyy"),
+            "Clock In": log.clockIn
+              ? format(new Date(log.clockIn), "HH:mm")
+              : "-",
+            "Clock Out": log.clockOut
+              ? format(new Date(log.clockOut), "HH:mm")
+              : "-",
+            Status: log.status,
+            Activities: log.activities || "-",
+            "Overtime Hours": log.overtimeHours?.toFixed(2) || "-",
+            "Work Type": "-",
+            "Working Hours": "-",
+            "Pause Hours": "-",
+            "Total Working Hours": "-",
+            "Leave Type": "-",
+            "Req Reason": "-",
           };
         } else {
           return {

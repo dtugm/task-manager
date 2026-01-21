@@ -89,7 +89,7 @@ export const AttendanceLogFilters = ({
               variant={"outline"}
               className={cn(
                 "w-full md:w-[260px] justify-start text-left font-normal bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl hover:bg-white/80",
-                !date && "text-muted-foreground"
+                !date && "text-muted-foreground",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4 text-slate-500" />
@@ -139,6 +139,7 @@ export const AttendanceLogFilters = ({
             <SelectItem value="all">All Records</SelectItem>
             <SelectItem value="Attendance">Attendance</SelectItem>
             <SelectItem value="Leave">Leave</SelectItem>
+            <SelectItem value="Overtime">Overtime</SelectItem>
           </SelectContent>
         </Select>
 
@@ -158,7 +159,7 @@ export const AttendanceLogFilters = ({
           </Select>
         )}
 
-        {recordType === "Leave" && (
+        {(recordType === "Leave" || recordType === "Overtime") && (
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-full md:w-[150px] bg-white/60 dark:bg-slate-900/60 border-transparent shadow-sm h-10 rounded-xl animate-in fade-in zoom-in-95 duration-200">
               <Filter className="mr-2 h-4 w-4 text-slate-500" />
