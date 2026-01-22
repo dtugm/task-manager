@@ -14,7 +14,18 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  Bell,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Task } from "@/types/task";
 import { useLanguage } from "@/contexts/language-context";
 import { CreateRelatedTaskModal } from "@/components/tasks/CreateRelatedTaskModal";
@@ -61,11 +72,38 @@ export function ExecutiveTaskCard({
   });
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
 
+  // Reminder State
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [isReminderSending, setIsReminderSending] = useState(false);
+
+  const handleSendReminder = async () => {
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+
+    if (!token) return;
+
+    setIsReminderSending(true);
+    try {
+      const response = await taskApi.sendReminder(token, task.id);
+      if (response && (response.success || (response as any).status === 200)) {
+        toast.success("Reminder sent successfully");
+        setIsReminderOpen(false);
+      } else {
+        toast.error("Failed to send reminder");
+      }
+    } catch (error) {
+      console.error("Failed to send reminder", error);
+      toast.error("Failed to send reminder");
+    } finally {
+      setIsReminderSending(false);
+    }
+  };
+
   // Helper to open dialog
   const openActionDialog = (
     type: "approve" | "reject" | "ask_approval",
     taskId: string,
-    taskTitle: string
+    taskTitle: string,
   ) => {
     setActionDialogState({
       open: true,
@@ -88,7 +126,7 @@ export function ExecutiveTaskCard({
         response = await taskApi.updateStatus(
           token,
           actionDialogState.taskId,
-          "PENDING_APPROVAL"
+          "PENDING_APPROVAL",
         );
       } else if (actionDialogState.type === "approve") {
         response = await taskApi.approveTask(token, actionDialogState.taskId);
@@ -96,7 +134,7 @@ export function ExecutiveTaskCard({
         response = await taskApi.rejectTask(
           token,
           actionDialogState.taskId,
-          reason || ""
+          reason || "",
         );
       }
 
@@ -245,16 +283,16 @@ export function ExecutiveTaskCard({
                   task.priority === "HIGH"
                     ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 ring-1 ring-inset ring-red-600/20"
                     : task.priority === "MEDIUM"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20"
-                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20"
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20"
+                      : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20"
                 }
               `}
             >
               {task.priority === "HIGH"
                 ? t.high
                 : task.priority === "MEDIUM"
-                ? t.medium
-                : t.low}
+                  ? t.medium
+                  : t.low}
             </Badge>
             <Badge
               variant="outline"
@@ -264,42 +302,56 @@ export function ExecutiveTaskCard({
                   task.status === "ACCEPTED"
                     ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 ring-1 ring-inset ring-green-600/20"
                     : task.status === "REJECTED"
-                    ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 ring-1 ring-inset ring-red-600/20"
-                    : task.status === "PENDING_APPROVAL"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20"
-                    : task.progress === 100
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 ring-1 ring-inset ring-blue-600/20"
-                    : task.progress > 0
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-600/20"
-                    : "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 ring-1 ring-inset ring-slate-500/20"
+                      ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 ring-1 ring-inset ring-red-600/20"
+                      : task.status === "PENDING_APPROVAL"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20"
+                        : task.progress === 100
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 ring-1 ring-inset ring-blue-600/20"
+                          : task.progress > 0
+                            ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-600/20"
+                            : "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 ring-1 ring-inset ring-slate-500/20"
                 }
               `}
             >
               {task.status === "ACCEPTED"
                 ? t.accepted
                 : task.status === "REJECTED"
-                ? t.rejected
-                : task.status === "PENDING_APPROVAL"
-                ? t.pendingApproval
-                : task.progress === 100
-                ? t.completed
-                : task.progress > 0
-                ? t.inProgress
-                : t.pending}
+                  ? t.rejected
+                  : task.status === "PENDING_APPROVAL"
+                    ? t.pendingApproval
+                    : task.progress === 100
+                      ? t.completed
+                      : task.progress > 0
+                        ? t.inProgress
+                        : t.pending}
             </Badge>
 
             {userRole !== "Supervisor" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditTask(task);
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsReminderOpen(true);
+                  }}
+                  title="Send Reminder"
+                >
+                  <Bell className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditTask(task);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -367,20 +419,60 @@ export function ExecutiveTaskCard({
           actionDialogState.type === "approve"
             ? t.approveTask
             : actionDialogState.type === "reject"
-            ? t.rejectTask
-            : t.askApproval
+              ? t.rejectTask
+              : t.askApproval
         }
         description={
           actionDialogState.type === "approve"
             ? `Are you sure you want to approve "${actionDialogState.taskTitle}"?`
             : actionDialogState.type === "reject"
-            ? `Are you sure you want to reject "${actionDialogState.taskTitle}"?`
-            : `Are you sure you want to ask approval for "${actionDialogState.taskTitle}"?`
+              ? `Are you sure you want to reject "${actionDialogState.taskTitle}"?`
+              : `Are you sure you want to ask approval for "${actionDialogState.taskTitle}"?`
         }
         actionType={actionDialogState.type}
         onConfirm={handleActionConfirm}
         isSubmitting={isActionSubmitting}
       />
+
+      <Dialog open={isReminderOpen} onOpenChange={setIsReminderOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+              <Bell className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <DialogTitle className="text-center text-xl font-bold text-slate-900 dark:text-slate-100">
+              Send Reminder
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Are you sure you want to send a reminder for this task?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsReminderOpen(false)}
+              disabled={isReminderSending}
+              className="rounded-xl border-slate-200"
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              onClick={handleSendReminder}
+              disabled={isReminderSending}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {isReminderSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Reminder"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

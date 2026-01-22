@@ -49,7 +49,7 @@ export const taskApi = {
     assigneeId?: string,
     creatorId?: string,
     search?: string,
-    projectId?: string
+    projectId?: string,
   ): Promise<TasksResponse> => {
     let url = `/tasks?page=${page}&limit=${limit}`;
     if (assigneeId) {
@@ -76,7 +76,7 @@ export const taskApi = {
     token: string,
     projectId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<TasksResponse> => {
     return fetcher<TasksResponse>(`/tasks/projects/${projectId}`, {
       method: "GET",
@@ -88,7 +88,7 @@ export const taskApi = {
 
   createTask: async (
     token: string,
-    data: CreateTaskRequest
+    data: CreateTaskRequest,
   ): Promise<ApiResponse<Task>> => {
     return fetcher<ApiResponse<Task>>("/tasks", {
       method: "POST",
@@ -102,7 +102,7 @@ export const taskApi = {
   updateTask: async (
     token: string,
     id: string,
-    data: UpdateTaskRequest
+    data: UpdateTaskRequest,
   ): Promise<ApiResponse<Task>> => {
     return fetcher<ApiResponse<Task>>(`/tasks/${id}`, {
       method: "PUT",
@@ -125,7 +125,7 @@ export const taskApi = {
   addComment: async (
     token: string,
     id: string,
-    data: { comment: string }
+    data: { comment: string },
   ): Promise<ApiResponse<any>> => {
     return fetcher<ApiResponse<any>>(`/tasks/${id}/comments`, {
       method: "POST",
@@ -138,7 +138,7 @@ export const taskApi = {
 
   getTaskLogs: async (
     token: string,
-    id: string
+    id: string,
   ): Promise<ApiResponse<any[]>> => {
     return fetcher<ApiResponse<any[]>>(`/tasks/${id}/logs`, {
       method: "GET",
@@ -149,7 +149,7 @@ export const taskApi = {
   },
 
   getCreatedTasksSummary: async (
-    token: string
+    token: string,
   ): Promise<CreatedTasksSummaryResponse> => {
     return fetcher<CreatedTasksSummaryResponse>("/tasks/summary/created", {
       method: "GET",
@@ -162,7 +162,7 @@ export const taskApi = {
   updateStatus: async (
     token: string,
     id: string,
-    status: string
+    status: string,
   ): Promise<ApiResponse<Task>> => {
     return fetcher<ApiResponse<Task>>(`/tasks/${id}/status`, {
       method: "PATCH",
@@ -175,7 +175,7 @@ export const taskApi = {
 
   approveTask: async (
     token: string,
-    id: string
+    id: string,
   ): Promise<ApiResponse<null>> => {
     return fetcher<ApiResponse<null>>(`/tasks/${id}/approve`, {
       method: "POST",
@@ -188,7 +188,7 @@ export const taskApi = {
   rejectTask: async (
     token: string,
     id: string,
-    reason: string
+    reason: string,
   ): Promise<ApiResponse<null>> => {
     return fetcher<ApiResponse<null>>(`/tasks/${id}/reject`, {
       method: "POST",
@@ -202,7 +202,7 @@ export const taskApi = {
   assignTask: async (
     token: string,
     id: string,
-    assigneeIds: string[]
+    assigneeIds: string[],
   ): Promise<ApiResponse<null>> => {
     return fetcher<ApiResponse<null>>(`/tasks/${id}/assign`, {
       method: "POST",
@@ -216,7 +216,7 @@ export const taskApi = {
   unassignTask: async (
     token: string,
     id: string,
-    assigneeIds: string[]
+    assigneeIds: string[],
   ): Promise<ApiResponse<null>> => {
     return fetcher<ApiResponse<null>>(`/tasks/${id}/assign`, {
       method: "DELETE",
@@ -224,6 +224,19 @@ export const taskApi = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ assigneeIds }),
+    });
+  },
+
+  sendReminder: async (
+    token: string,
+    taskId: string,
+  ): Promise<ApiResponse<null>> => {
+    return fetcher<ApiResponse<null>>("/tasks/reminder", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ taskId }),
     });
   },
 };
