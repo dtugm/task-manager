@@ -35,7 +35,7 @@ export const getNavigation = (t: any): SidebarGroup[] => [
     ],
   },
   {
-    title: t.attendance, // Using t.attendance as title might be "Attendance", check if suitable or needs new key. Usually safe.
+    title: t.attendance,
     items: [
       { name: t.attendance, href: "/attendance", icon: Clock },
       { name: t.attendanceLog, href: "/attendance-log", icon: ClipboardClock },

@@ -23,6 +23,8 @@ import {
   Lock,
   Settings,
   Phone,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -41,6 +43,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const getToken = () => {
     // Basic cookie parsing
@@ -331,12 +334,25 @@ export default function SettingsPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Leave blank to keep current password"
-                  className="pl-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
+                  className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF] focus-visible:border-[#0077FF] transition-all hover:bg-white dark:hover:bg-slate-950"
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </div>
           </CardContent>
