@@ -48,6 +48,8 @@ export interface BaseLogUser {
 export interface BaseLog {
   date: string;
   user: BaseLogUser;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface AttendanceItem extends BaseLog {

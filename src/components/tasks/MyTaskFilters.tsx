@@ -59,23 +59,6 @@ export function MyTaskFilters({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Search Filter */}
-        <div className="space-y-1.5 group">
-          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1 group-focus-within:text-purple-600 transition-colors">
-            {t.searchByName}
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
-            <Input
-              type="text"
-              placeholder={t.searchPlaceholder}
-              value={filterSearch}
-              onChange={(e) => setFilterSearch(e.target.value)}
-              className="pl-9 bg-white/60 dark:bg-slate-800/60 border-transparent focus:border-purple-500/50 focus:bg-white dark:focus:bg-slate-800 shadow-sm rounded-xl h-10 transition-all font-medium text-sm"
-            />
-          </div>
-        </div>
-
         {/* Date From Filter */}
         <div className="space-y-1.5 group">
           <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1 group-focus-within:text-purple-600 transition-colors">

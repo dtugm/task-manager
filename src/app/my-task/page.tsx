@@ -3,9 +3,16 @@
 import { useMemo, useState } from "react";
 import { useLanguage } from "@/contexts/language-context";
 import { Task } from "@/types/task";
-import { Loader2, CheckSquare, RefreshCw } from "lucide-react";
+import {
+  Loader2,
+  CheckSquare,
+  RefreshCw,
+  Search,
+  ListFilter,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { useMyTasks } from "@/hooks/useMyTasks";
@@ -20,6 +27,7 @@ export default function MyTasksPage() {
   // Modal State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter State
   const [filterDateFrom, setFilterDateFrom] = useState<string>("");
@@ -128,28 +136,67 @@ export default function MyTasksPage() {
           </Button>
         </div>
 
-        <section className="space-y-6">
-          {/* Stats Grid */}
-          <MyTaskStats tasks={tasks} />
+        <section>
+          {/* Sticky Header Section */}
+          <div className="sticky top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
+            {/* Stats Grid - Now Sticky */}
+            <MyTaskStats tasks={tasks} />
 
-          {/* Filters */}
-          <MyTaskFilters
-            filterSearch={filterSearch}
-            setFilterSearch={setFilterSearch}
-            filterDateFrom={filterDateFrom}
-            setFilterDateFrom={setFilterDateFrom}
-            filterDateTo={filterDateTo}
-            setFilterDateTo={setFilterDateTo}
-            filterProject={filterProject}
-            setFilterProject={setFilterProject}
-            filterPriority={filterPriority}
-            setFilterPriority={setFilterPriority}
-            filterStatus={filterStatus}
-            setFilterStatus={setFilterStatus}
-            filterQuest={filterQuest}
-            setFilterQuest={setFilterQuest}
-            projects={projects}
-          />
+            {/* Toolbar & Filters */}
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-3 w-full">
+                {/* Search */}
+                <div className="relative group flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                  <Input
+                    placeholder={t.searchByName || "Search tasks..."}
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    className="pl-10 w-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-0">
+                  <Button
+                    variant={showFilters ? "secondary" : "outline"}
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={
+                      showFilters
+                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 rounded-xl"
+                        : "bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }
+                  >
+                    <ListFilter className="h-4 w-4 mr-2" />
+                    {t.filter || "Filters"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Collapsible Filters Section */}
+              {showFilters && (
+                <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <MyTaskFilters
+                    filterSearch={filterSearch}
+                    setFilterSearch={setFilterSearch}
+                    filterDateFrom={filterDateFrom}
+                    setFilterDateFrom={setFilterDateFrom}
+                    filterDateTo={filterDateTo}
+                    setFilterDateTo={setFilterDateTo}
+                    filterProject={filterProject}
+                    setFilterProject={setFilterProject}
+                    filterPriority={filterPriority}
+                    setFilterPriority={setFilterPriority}
+                    filterStatus={filterStatus}
+                    setFilterStatus={setFilterStatus}
+                    filterQuest={filterQuest}
+                    setFilterQuest={setFilterQuest}
+                    projects={projects}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Task List */}
           {isLoading ? (

@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { LeaveRequest } from "@/types/leave";
+import { ActivityCell } from "@/components/attendance-log/ActivityCell";
 
 interface ManagerLeaveTableProps {
   leaveRequests: LeaveRequest[];
@@ -235,8 +236,11 @@ export function ManagerLeaveTable({
                   <TableCell className="font-medium">
                     {format(new Date(leave.endDate), "MMM d, yyyy")}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell max-w-[200px] truncate">
-                    {leave.requestReason}
+                  <TableCell className="hidden md:table-cell max-w-[200px]">
+                    <ActivityCell
+                      text={leave.requestReason}
+                      title="Request Reason"
+                    />
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -246,7 +250,7 @@ export function ManagerLeaveTable({
                         leave.status === "PENDING" &&
                           "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
                         leave.status === "REJECTED" &&
-                          "bg-red-100 text-red-700 hover:bg-red-100"
+                          "bg-red-100 text-red-700 hover:bg-red-100",
                       )}
                     >
                       {leave.status}

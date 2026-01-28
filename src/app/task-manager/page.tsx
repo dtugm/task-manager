@@ -1,7 +1,16 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, ListTodo, RefreshCw, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Trash2,
+  Loader2,
+  ListTodo,
+  RefreshCw,
+  Plus,
+  Search,
+  ListFilter,
+} from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
@@ -41,6 +50,7 @@ export default function TaskManagerForManagerPage() {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter State
   const [filterDateFrom, setFilterDateFrom] = useState<string>("");
@@ -92,7 +102,7 @@ export default function TaskManagerForManagerPage() {
       } else {
         // Task not in list, fetch it individually
         const match = document.cookie.match(
-          new RegExp("(^| )accessToken=([^;]+)")
+          new RegExp("(^| )accessToken=([^;]+)"),
         );
         const token = match ? match[2] : null;
 
@@ -129,7 +139,7 @@ export default function TaskManagerForManagerPage() {
           (child) =>
             child.title.toLowerCase().includes(searchLower) ||
             (child.description &&
-              child.description.toLowerCase().includes(searchLower))
+              child.description.toLowerCase().includes(searchLower)),
         );
 
         if (!parentMatches && !childMatches) return false;
@@ -243,51 +253,93 @@ export default function TaskManagerForManagerPage() {
           </div>
         </div>
 
-        {/* SECTION 1: Tasks from Executives */}
-        <section className="space-y-6">
+        {/* Sticky Header Section */}
+        <div className="sticky top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 pl-3 border-l-4 border-indigo-500">
               {t.tasksFromExecutives}
             </h3>
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {t.createTask}
-            </Button>
-            <CreateTaskDialog
-              open={isCreateOpen}
-              onOpenChange={setIsCreateOpen}
-              projects={projects}
-              managers={supervisors}
-              isOptionsLoading={isSupervisorsLoading}
-              onTaskCreated={() => fetchTasks()}
-            />
           </div>
 
-          {/* Stats Grid */}
+          {/* Stats Grid - Now Sticky */}
           <ExecutiveTaskStats tasks={executiveTasks} />
 
-          {/* Filters */}
-          <ManagerTaskFilters
-            filterSearch={filterSearch}
-            setFilterSearch={setFilterSearch}
-            filterDateFrom={filterDateFrom}
-            setFilterDateFrom={setFilterDateFrom}
-            filterDateTo={filterDateTo}
-            setFilterDateTo={setFilterDateTo}
-            filterProject={filterProject}
-            setFilterProject={setFilterProject}
-            filterPriority={filterPriority}
-            setFilterPriority={setFilterPriority}
-            filterStatus={filterStatus}
-            setFilterStatus={setFilterStatus}
-            filterQuest={filterQuest}
-            setFilterQuest={setFilterQuest}
-            projects={projects}
-          />
+          {/* Toolbar & Filters */}
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-3 w-full">
+              {/* Search */}
+              <div className="relative group flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+                <Input
+                  placeholder={t.searchByName || "Search tasks..."}
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  className="pl-10 w-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
+                />
+              </div>
 
+              {/* Actions */}
+              <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-0">
+                <Button
+                  variant={showFilters ? "secondary" : "outline"}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={
+                    showFilters
+                      ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 rounded-xl"
+                      : "bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }
+                >
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  {t.filter || "Filters"}
+                </Button>
+
+                <CreateTaskDialog
+                  open={isCreateOpen}
+                  onOpenChange={setIsCreateOpen}
+                  projects={projects}
+                  managers={supervisors}
+                  isOptionsLoading={isSupervisorsLoading}
+                  onTaskCreated={() => fetchTasks()}
+                />
+
+                <Button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">{t.createTask}</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Collapsible Filters Section */}
+            {showFilters && (
+              <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
+                <ManagerTaskFilters
+                  filterSearch={filterSearch}
+                  setFilterSearch={setFilterSearch}
+                  filterDateFrom={filterDateFrom}
+                  setFilterDateFrom={setFilterDateFrom}
+                  filterDateTo={filterDateTo}
+                  setFilterDateTo={setFilterDateTo}
+                  filterProject={filterProject}
+                  setFilterProject={setFilterProject}
+                  filterPriority={filterPriority}
+                  setFilterPriority={setFilterPriority}
+                  filterStatus={filterStatus}
+                  setFilterStatus={setFilterStatus}
+                  filterQuest={filterQuest}
+                  setFilterQuest={setFilterQuest}
+                  projects={projects}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 1: Tasks from Executives (Content) */}
+        <section className="space-y-6">
           {/* Executive Tasks List */}
           {isLoading ? (
             <div className="bg-white/30 backdrop-blur-sm rounded-xl p-12 flex items-center justify-center border border-white/10">

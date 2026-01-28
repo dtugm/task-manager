@@ -19,6 +19,7 @@ import {
   Trash2,
   Search,
   RefreshCw,
+  ListFilter,
 } from "lucide-react";
 import {
   Select,
@@ -61,6 +62,7 @@ export default function TaskAssignmentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -150,7 +152,7 @@ export default function TaskAssignmentPage() {
           fetchedTasks = fetchedTasks.filter(
             (task) =>
               (task.title?.toLowerCase() || "").includes(lowerQuery) ||
-              (task.description?.toLowerCase() || "").includes(lowerQuery)
+              (task.description?.toLowerCase() || "").includes(lowerQuery),
           );
         }
 
@@ -388,7 +390,7 @@ export default function TaskAssignmentPage() {
     if (filterAssignee) {
       const lowerAssignee = filterAssignee.toLowerCase();
       const hasMatch = task.assignees?.some((a) =>
-        a.assignee.fullName.toLowerCase().includes(lowerAssignee)
+        a.assignee.fullName.toLowerCase().includes(lowerAssignee),
       );
       if (!hasMatch) return false;
     }
@@ -422,54 +424,6 @@ export default function TaskAssignmentPage() {
             {t.taskAssignmentDesc}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          {/* Search Bar */}
-          <div className="relative group flex-1 md:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
-            <Input
-              placeholder={t.search}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-10 w-full sm:w-[280px] lg:w-[280px] bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={fetchTasks}
-              className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-              title={t.refresh}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
-            <Button
-              variant={deleteMode ? "destructive" : "outline"}
-              onClick={() => setDeleteMode(!deleteMode)}
-              className={
-                !deleteMode
-                  ? "flex-1 md:flex-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all rounded-xl shadow-sm"
-                  : "flex-1 md:flex-none rounded-xl shadow-sm"
-              }
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {deleteMode ? t.cancel : t.delete}
-            </Button>
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="flex-1 md:flex-none bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {t.createTask}
-            </Button>
-          </div>
-        </div>
       </div>
 
       {error && (
@@ -479,37 +433,114 @@ export default function TaskAssignmentPage() {
         </Alert>
       )}
 
-      {/* Stats Cards */}
-      <TaskStats stats={stats} />
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50">
+        {/* Stats Cards - Now Sticky */}
+        <TaskStats stats={stats} />
 
-      {/* Filters Section */}
-      <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-white/5">
-        <TaskFilters
-          filterDateFrom={filterDateFrom}
-          setFilterDateFrom={setFilterDateFrom}
-          filterDateTo={filterDateTo}
-          setFilterDateTo={setFilterDateTo}
-          filterProject={filterProject}
-          setFilterProject={setFilterProject}
-          filterPriority={filterPriority}
-          setFilterPriority={setFilterPriority}
-          filterStatus={filterStatus}
-          setFilterStatus={setFilterStatus}
-          filterQuest={filterQuest}
-          setFilterQuest={setFilterQuest}
-          filterAssignee={filterAssignee}
-          setFilterAssignee={setFilterAssignee}
-          projects={projects}
-          onClear={() => {
-            setFilterDateFrom("");
-            setFilterDateTo("");
-            setFilterProject("all");
-            setFilterPriority("all");
-            setFilterStatus("all");
-            setFilterQuest("all");
-            setFilterAssignee("");
-          }}
-        />
+        {/* Toolbar & Filters */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            {/* Search */}
+            <div className="relative group flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
+              <Input
+                placeholder={t.search}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10 w-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-[#0077FF]"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 sm:pb-0">
+              <Button
+                variant={showFilters ? "secondary" : "outline"}
+                onClick={() => setShowFilters(!showFilters)}
+                className={
+                  showFilters
+                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 rounded-xl"
+                    : "bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                }
+              >
+                <ListFilter className="h-4 w-4 mr-2" />
+                {t.filter || "Filters"}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={fetchTasks}
+                className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 min-w-[2.5rem]"
+                title={t.refresh}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+              </Button>
+              <Button
+                variant={deleteMode ? "destructive" : "outline"}
+                onClick={() => setDeleteMode(!deleteMode)}
+                className={
+                  !deleteMode
+                    ? "bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all rounded-xl shadow-sm"
+                    : "rounded-xl shadow-sm"
+                }
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {deleteMode ? t.cancel : t.delete}
+                </span>
+                <span className="sm:hidden">
+                  {deleteMode ? "Cancel" : "Del"}
+                </span>
+              </Button>
+              <Button
+                onClick={() => setIsCreateOpen(true)}
+                className="bg-[#0077FF] hover:bg-[#0066DD] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all rounded-xl"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">{t.createTask}</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Collapsible Filters Section */}
+          {showFilters && (
+            <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 dark:border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
+              <TaskFilters
+                filterDateFrom={filterDateFrom}
+                setFilterDateFrom={setFilterDateFrom}
+                filterDateTo={filterDateTo}
+                setFilterDateTo={setFilterDateTo}
+                filterProject={filterProject}
+                setFilterProject={setFilterProject}
+                filterPriority={filterPriority}
+                setFilterPriority={setFilterPriority}
+                filterStatus={filterStatus}
+                setFilterStatus={setFilterStatus}
+                filterQuest={filterQuest}
+                setFilterQuest={setFilterQuest}
+                filterAssignee={filterAssignee}
+                setFilterAssignee={setFilterAssignee}
+                projects={projects}
+                onClear={() => {
+                  setFilterDateFrom("");
+                  setFilterDateTo("");
+                  setFilterProject("all");
+                  setFilterPriority("all");
+                  setFilterStatus("all");
+                  setFilterQuest("all");
+                  setFilterAssignee("");
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Task List */}
