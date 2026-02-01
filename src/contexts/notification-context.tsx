@@ -25,7 +25,7 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function NotificationProvider({
@@ -38,18 +38,51 @@ export function NotificationProvider({
   const [loading, setLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
+  const [token, setToken] = useState<string | undefined>(undefined);
 
-  // Initialize WebSocket connection
+  // Monitor token changes (handles login/logout)
   useEffect(() => {
-    const token = Cookies.get("accessToken");
-    if (!token) return;
+    // Check token immediately
+    const currentToken = Cookies.get("accessToken");
+    setToken(currentToken);
+
+    // Poll for token changes
+    const interval = setInterval(() => {
+      const newToken = Cookies.get("accessToken");
+      setToken((prev) => {
+        if (prev !== newToken) {
+          return newToken;
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Initialize WebSocket connection when token changes
+  useEffect(() => {
+    if (!token) {
+      // Clean up existing socket if token is removed (logout)
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+        setConnected(false);
+      }
+      return;
+    }
+
+    // Disconnect existing socket before creating new one
+    if (socket) {
+      socket.disconnect();
+    }
 
     const socketInstance = io(
       `${process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL}/notifications`,
       {
         auth: { token },
         transports: ["websocket", "polling"],
-      }
+      },
     );
 
     socketInstance.on("connect", () => {
@@ -90,7 +123,8 @@ export function NotificationProvider({
     return () => {
       socketInstance.disconnect();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -123,8 +157,8 @@ export function NotificationProvider({
       await notificationApi.markAsRead(token, id);
       setNotifications((prev) =>
         prev.map((notif) =>
-          notif.id === id ? { ...notif, isRead: true } : notif
-        )
+          notif.id === id ? { ...notif, isRead: true } : notif,
+        ),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
@@ -140,7 +174,7 @@ export function NotificationProvider({
     try {
       await notificationApi.markAllAsRead(token);
       setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, isRead: true }))
+        prev.map((notif) => ({ ...notif, isRead: true })),
       );
       setUnreadCount(0);
       toast.success("All notifications marked as read");
@@ -169,7 +203,7 @@ export function NotificationProvider({
         toast.error("Failed to delete notification");
       }
     },
-    [notifications]
+    [notifications],
   );
 
   // Initial fetch
@@ -199,7 +233,7 @@ export function useNotifications() {
   const context = useContext(NotificationContext);
   if (!context) {
     throw new Error(
-      "useNotifications must be used within NotificationProvider"
+      "useNotifications must be used within NotificationProvider",
     );
   }
   return context;
