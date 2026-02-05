@@ -245,6 +245,7 @@ type Translations = {
   changeRole: string;
   setActive: string;
   isActive: string;
+  phoneNumber: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -490,6 +491,7 @@ const translations: Record<Language, Translations> = {
     changeRole: "Change Role",
     setActive: "Set Active",
     isActive: "Active",
+    phoneNumber: "Phone Number",
   },
   id: {
     dashboard: "Dasbor",
@@ -733,6 +735,7 @@ const translations: Record<Language, Translations> = {
     changeRole: "Ubah Peran",
     setActive: "Set Aktif",
     isActive: "Aktif",
+    phoneNumber: "Nomor Telepon",
   },
 };
 

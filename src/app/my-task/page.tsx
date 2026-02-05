@@ -144,9 +144,9 @@ export default function MyTasksPage() {
 
             {/* Toolbar & Filters */}
             <div className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-3 w-full">
+              <div className="flex flex-col md:flex-row gap-3 w-full items-center">
                 {/* Search */}
-                <div className="relative group flex-1">
+                <div className="relative group flex-1  ">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#0077FF] transition-colors" />
                   <Input
                     placeholder={t.searchByName || "Search tasks..."}

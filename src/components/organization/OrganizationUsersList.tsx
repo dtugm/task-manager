@@ -52,6 +52,7 @@ export function OrganizationUsersList({
           <TableRow>
             <TableHead>{t.user}</TableHead>
             <TableHead>{t.role}</TableHead>
+            <TableHead>{t.phoneNumber}</TableHead>
             <TableHead>{t.status}</TableHead>
             <TableHead className="w-[80px] text-right">{t.actions}</TableHead>
           </TableRow>
@@ -59,7 +60,7 @@ export function OrganizationUsersList({
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
+              <TableCell colSpan={5} className="h-24 text-center">
                 {t.noMembersFound}
               </TableCell>
             </TableRow>
@@ -79,7 +80,7 @@ export function OrganizationUsersList({
                         className="text-slate-700 font-medium text-xs"
                       >
                         {getInitials(
-                          member.user.fullName || member.user.username
+                          member.user.fullName || member.user.username,
                         )}
                       </AvatarFallback>
                     </Avatar>
@@ -100,6 +101,11 @@ export function OrganizationUsersList({
                   >
                     {member.role}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {member.user.phoneNumber || "-"}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
