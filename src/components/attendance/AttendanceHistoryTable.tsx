@@ -21,6 +21,7 @@ import { Download, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { AttendanceLog } from "@/types/attendance";
+import { ActivityCell } from "../attendance-log/ActivityCell";
 
 interface AttendanceHistoryTableProps {
   history: AttendanceLog[];
@@ -190,15 +191,18 @@ export function AttendanceHistoryTable({
                       ? format(new Date(log.clockOut), "HH:mm")
                       : "-"}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell max-w-[200px] truncate">
-                    {log.activities || "-"}
+                  <TableCell className="hidden md:table-cell max-w-[200px]">
+                    <ActivityCell
+                      text={log.activities || ""}
+                      title="Activities"
+                    />
                   </TableCell>
                   <TableCell>
                     <Badge
                       className={cn(
                         log.clockOut
                           ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-100",
                       )}
                     >
                       {log.clockOut ? "Completed" : "Active"}

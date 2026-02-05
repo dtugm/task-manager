@@ -21,6 +21,7 @@ import { Download, Loader2, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { LeaveRequest } from "@/types/leave";
+import { ActivityCell } from "../attendance-log/ActivityCell";
 
 interface LeaveHistoryTableProps {
   leaveHistory: LeaveRequest[];
@@ -205,8 +206,8 @@ export function LeaveHistoryTable({
                   <TableCell className="font-medium">
                     {format(new Date(leave.endDate), "MMM d, yyyy")}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell max-w-[200px] truncate">
-                    {leave.requestReason}
+                  <TableCell className="hidden md:table-cell max-w-[200px]">
+                    <ActivityCell text={leave.requestReason} title="Reason" />
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -218,7 +219,7 @@ export function LeaveHistoryTable({
                         leave.status === "REJECTED" &&
                           "bg-red-100 text-red-700 hover:bg-red-100",
                         leave.status === "CANCELED" &&
-                          "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                          "bg-gray-100 text-gray-700 hover:bg-gray-100",
                       )}
                     >
                       {leave.status}
