@@ -239,4 +239,13 @@ export const taskApi = {
       body: JSON.stringify({ taskId }),
     });
   },
+
+  getCurrentMonthPoints: async (token: string): Promise<ApiResponse<any>> => {
+    return fetcher<ApiResponse<any>>("/tasks/points/current-month", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
 };

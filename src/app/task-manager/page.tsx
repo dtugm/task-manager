@@ -254,7 +254,7 @@ export default function TaskManagerForManagerPage() {
         </div>
 
         {/* Sticky Header Section */}
-        <div className="sticky top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50">
+        <div className="lg:sticky lg:top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 pl-3 border-l-4 border-indigo-500">
               {t.tasksFromExecutives}

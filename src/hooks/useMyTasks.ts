@@ -54,7 +54,7 @@ export function useMyTasks() {
         token,
         1,
         100,
-        userId || undefined
+        userId || undefined,
       );
       if (response.success) {
         setTasks(response.data.tasks);
@@ -81,15 +81,35 @@ export function useMyTasks() {
     }
   }, []);
 
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+
+  const fetchPoints = useCallback(async () => {
+    const match = document.cookie.match(new RegExp("(^| )accessToken=([^;]+)"));
+    const token = match ? match[2] : null;
+    if (!token) return;
+
+    try {
+      const response = await taskApi.getCurrentMonthPoints(token);
+      if (response.success && response.data) {
+        setTotalPoints(response.data.points);
+      }
+    } catch (err) {
+      console.error("Failed to fetch points", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTasks();
     fetchProjects();
-  }, [fetchTasks, fetchProjects]);
+    fetchPoints();
+  }, [fetchTasks, fetchProjects, fetchPoints]);
 
   return {
     tasks,
     projects,
     isLoading,
+    totalPoints,
     fetchTasks,
+    fetchPoints,
   };
 }

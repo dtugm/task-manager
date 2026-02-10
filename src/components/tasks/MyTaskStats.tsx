@@ -6,9 +6,10 @@ import { Tag, CheckCircle2, TrendingUp, Award } from "lucide-react";
 
 interface MyTaskStatsProps {
   tasks: Task[];
+  totalPoints: number;
 }
 
-export function MyTaskStats({ tasks }: MyTaskStatsProps) {
+export function MyTaskStats({ tasks, totalPoints }: MyTaskStatsProps) {
   const { t } = useLanguage();
 
   const stats = [
@@ -41,10 +42,7 @@ export function MyTaskStats({ tasks }: MyTaskStatsProps) {
     },
     {
       label: t.totalPoints,
-      // Only sum points if status is ACCEPTED
-      value: tasks
-        .filter((t) => t.status === "ACCEPTED")
-        .reduce((sum, t) => sum + (t.points || 0), 0),
+      value: totalPoints,
       icon: Award,
       gradient: "from-yellow-500 to-orange-500",
       bg: "bg-yellow-500/10",

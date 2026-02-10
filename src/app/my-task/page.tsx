@@ -22,7 +22,7 @@ import { MyTaskCard } from "@/components/tasks/MyTaskCard";
 
 export default function MyTasksPage() {
   const { t } = useLanguage();
-  const { tasks, projects, isLoading, fetchTasks } = useMyTasks();
+  const { tasks, projects, isLoading, fetchTasks, totalPoints } = useMyTasks();
 
   // Modal State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -138,9 +138,9 @@ export default function MyTasksPage() {
 
         <section>
           {/* Sticky Header Section */}
-          <div className="sticky top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
+          <div className="lg:sticky lg:top-0 z-30 space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 backdrop-blur-xl bg-slate-50/80 dark:bg-slate-950/80 supports-[backdrop-filter]:bg-slate-50/30 dark:supports-[backdrop-filter]:bg-slate-950/30 transition-all rounded-b-2xl shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
             {/* Stats Grid - Now Sticky */}
-            <MyTaskStats tasks={tasks} />
+            <MyTaskStats tasks={tasks} totalPoints={totalPoints} />
 
             {/* Toolbar & Filters */}
             <div className="space-y-4">

@@ -70,14 +70,17 @@ export function useDashboard() {
       }
 
       // 2. Parallel Fetching
-      const [allTasksRes, myTasksRes, projectsRes] = await Promise.all([
-        // Total Tasks (Fetch minimal page to get total count)
-        taskApi.getTasks(token, 1, 1),
-        // My Tasks (Fetch more to calculate points)
-        taskApi.getTasks(token, 1, 100, userId),
-        // Projects
-        projectApi.getAllProjects(token),
-      ]);
+      const [allTasksRes, myTasksRes, projectsRes, pointsRes] =
+        await Promise.all([
+          // Total Tasks (Fetch minimal page to get total count)
+          taskApi.getTasks(token, 1, 1),
+          // My Tasks (Fetch more to calculate points)
+          taskApi.getTasks(token, 1, 100, userId),
+          // Projects
+          projectApi.getAllProjects(token),
+          // Points
+          taskApi.getCurrentMonthPoints(token),
+        ]);
 
       let totalTasks = 0;
       let myTasksCount = 0;
@@ -90,15 +93,14 @@ export function useDashboard() {
 
       if (myTasksRes.success) {
         myTasksCount = myTasksRes.data.pagination.total;
-        const myTasks = myTasksRes.data.tasks;
-        // Calculate points based on progress === 100
-        totalPoints = myTasks
-          .filter((t) => t.progress === 100)
-          .reduce((sum, t) => sum + (t.points || 0), 0);
       }
 
       if (projectsRes.success && Array.isArray(projectsRes.data)) {
         totalProjects = projectsRes.data.length;
+      }
+
+      if (pointsRes && pointsRes.success) {
+        totalPoints = pointsRes.data.points;
       }
 
       setStats({
