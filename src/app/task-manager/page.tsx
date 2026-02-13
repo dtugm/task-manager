@@ -145,18 +145,18 @@ export default function TaskManagerForManagerPage() {
         if (!parentMatches && !childMatches) return false;
       }
 
-      if (filterDateFrom || filterDateTo) {
-        const taskDate = new Date(task.dueDate);
-        if (filterDateFrom) {
-          const fromDate = new Date(filterDateFrom);
-          if (taskDate < fromDate) return false;
-        }
-        if (filterDateTo) {
-          const toDate = new Date(filterDateTo);
-          toDate.setHours(23, 59, 59, 999);
-          if (taskDate > toDate) return false;
-        }
-      }
+      // if (filterDateFrom || filterDateTo) {
+      //   const taskDate = new Date(task.dueDate);
+      //   if (filterDateFrom) {
+      //     const fromDate = new Date(filterDateFrom);
+      //     if (taskDate < fromDate) return false;
+      //   }
+      //   if (filterDateTo) {
+      //     const toDate = new Date(filterDateTo);
+      //     toDate.setHours(23, 59, 59, 999);
+      //     if (taskDate > toDate) return false;
+      //   }
+      // }
 
       if (filterProject !== "all") {
         const projectId = task.project?.id || task.projectId;

@@ -69,13 +69,47 @@ export function useManagerTasks() {
         }
       }
 
-      const response = await taskApi.getTasks(token, 1, 100);
-      if (response.success) {
-        const fetchedTasks = response.data.tasks;
-        const taskMap = new Map(fetchedTasks.map((t) => [t.id, t]));
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch tasks created by me AND tasks assigned to me in parallel to achieve "OR" logic
+      // API defaults to "AND" when both params are present
+      const [createdResponse, assignedResponse] = await Promise.all([
+        taskApi.getTasks(
+          token,
+          1,
+          100,
+          undefined, // assigneeId
+          userId || undefined, // creatorId
+          undefined, // search
+          undefined, // projectId
+        ),
+        taskApi.getTasks(
+          token,
+          1,
+          100,
+          userId || undefined, // assigneeId
+          undefined, // creatorId
+          undefined, // search
+          undefined, // projectId
+        ),
+      ]);
+
+      if (createdResponse.success && assignedResponse.success) {
+        const createdTasks = createdResponse.data.tasks;
+        const assignedTasks = assignedResponse.data.tasks;
+
+        // Merge and deduplicate
+        const allFetchedTasks = [...createdTasks, ...assignedTasks];
+        const uniqueTasksMap = new Map(allFetchedTasks.map((t) => [t.id, t]));
+        const uniqueTasks = Array.from(uniqueTasksMap.values());
+
+        const taskMap = new Map(uniqueTasks.map((t) => [t.id, t]));
 
         // Hydrate children
-        const allTasksHydrated = fetchedTasks.map((task) => {
+        const allTasksHydrated = uniqueTasks.map((task) => {
           if (!task.childTasks || task.childTasks.length === 0) {
             return task;
           }
@@ -86,22 +120,10 @@ export function useManagerTasks() {
           return { ...task, childTasks: enrichedChildren };
         });
 
-        // 3. Filter Relevant Tasks
+        // 3. Since we explicitly fetched "Created By Me" and "Assigned To Me",
+        // all tasks in this list are relevant.
         const myRelevantTasksMap = new Map<string, Task>();
-
-        allTasksHydrated.forEach((t) => {
-          const isCreatedByMe =
-            t.creator?.id === userId || t.creatorId === userId;
-
-          const isAssignedToMe = t.assignees?.some(
-            (a) => a.assignee?.id === userId || (a as any).assigneeId === userId
-          );
-
-          // Only add if we have a userId to verify against
-          if (userId && (isCreatedByMe || isAssignedToMe)) {
-            myRelevantTasksMap.set(t.id, t);
-          }
-        });
+        allTasksHydrated.forEach((t) => myRelevantTasksMap.set(t.id, t));
 
         const relevantTasksList = Array.from(myRelevantTasksMap.values());
 
@@ -114,7 +136,7 @@ export function useManagerTasks() {
           return !parentIsRelevant;
         });
 
-        setAllTasks(fetchedTasks);
+        setAllTasks(allFetchedTasks);
         setExecutiveTasks(topLevelRelevantTasks);
       }
     } catch (err) {
@@ -150,7 +172,7 @@ export function useManagerTasks() {
         token,
         ORGANIZATION_ID,
         1,
-        100
+        100,
       );
 
       let rawData: any = response;
@@ -192,7 +214,7 @@ export function useManagerTasks() {
       });
 
       const uniqueSupervisors = Array.from(
-        new Map(mappedSupervisors.map((s) => [s.id, s])).values()
+        new Map(mappedSupervisors.map((s) => [s.id, s])).values(),
       );
       setSupervisors(uniqueSupervisors);
     } catch (err) {
