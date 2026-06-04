@@ -1,4 +1,10 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,9 +23,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, RefreshCw } from "lucide-react";
+import {
+  Download,
+  ImageOff,
+  Loader2,
+  RefreshCcw,
+  RefreshCw,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useRef, useState } from "react";
+import { attendanceApi } from "@/lib/attendance-api";
 import type { AttendanceLog } from "@/types/attendance";
 import { ActivityCell } from "../attendance-log/ActivityCell";
 
@@ -37,6 +51,19 @@ interface AttendanceHistoryTableProps {
   t: any; // Translation object
 }
 
+interface PreviewState {
+  url: string;
+  label: string;
+  logId: string;
+  side: "in" | "out";
+}
+
+function getAuthToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^| )accessToken=([^;]+)/);
+  return match ? match[1] : null;
+}
+
 export function AttendanceHistoryTable({
   history,
   loading,
@@ -50,6 +77,112 @@ export function AttendanceHistoryTable({
   onFilterWorkTypeChange,
   t,
 }: AttendanceHistoryTableProps) {
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [replacing, setReplacing] = useState(false);
+  const [bustParam, setBustParam] = useState<Record<string, number>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const cacheBustedUrl = (url: string | null | undefined, logId: string) => {
+    if (!url) return url ?? null;
+    const bust = bustParam[logId];
+    if (!bust) return url;
+    return url.includes("?") ? `${url}&v=${bust}` : `${url}?v=${bust}`;
+  };
+
+  const openPreview = (
+    url: string | null | undefined,
+    label: string,
+    logId: string,
+    side: "in" | "out"
+  ) => {
+    if (!url) return;
+    setPreview({
+      url: cacheBustedUrl(url, logId) ?? url,
+      label,
+      logId,
+      side,
+    });
+  };
+
+  const renderThumb = (
+    url: string | null | undefined,
+    label: string,
+    logId: string,
+    side: "in" | "out"
+  ) => {
+    if (!url) {
+      return (
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400">
+          <ImageOff className="h-4 w-4" />
+        </span>
+      );
+    }
+    const displayUrl = cacheBustedUrl(url, logId) ?? url;
+    return (
+      <button
+        type="button"
+        onClick={() => openPreview(url, label, logId, side)}
+        className="inline-block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={displayUrl}
+          alt={label}
+          className="h-10 w-10 rounded-md object-cover border border-slate-200 dark:border-slate-700/50"
+        />
+      </button>
+    );
+  };
+
+  const handleReplaceClick = () => {
+    if (!preview || replacing) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file || !preview) return;
+
+    const token = getAuthToken();
+    if (!token) {
+      alert("Please log in again.");
+      return;
+    }
+
+    setReplacing(true);
+    try {
+      const resp = await attendanceApi.replaceAttendancePhoto(
+        token,
+        preview.logId,
+        preview.side,
+        file
+      );
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.error?.message || "Failed to replace photo");
+      }
+      const newUrl =
+        preview.side === "in"
+          ? resp.data.clockInPhotoUrl
+          : resp.data.clockOutPhotoUrl;
+      if (newUrl) {
+        const bust = Date.now();
+        setBustParam((prev) => ({ ...prev, [preview.logId]: bust }));
+        const busted = newUrl.includes("?")
+          ? `${newUrl}&v=${bust}`
+          : `${newUrl}?v=${bust}`;
+        setPreview({ ...preview, url: busted });
+      }
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to replace photo");
+    } finally {
+      setReplacing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -144,6 +277,7 @@ export function AttendanceHistoryTable({
               <TableHead>Type</TableHead>
               <TableHead>Clock In</TableHead>
               <TableHead>Clock Out</TableHead>
+              <TableHead className="hidden sm:table-cell">Photos</TableHead>
               <TableHead className="hidden md:table-cell">Activities</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -151,7 +285,7 @@ export function AttendanceHistoryTable({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   <div className="flex justify-center items-center gap-2 text-slate-500">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     Loading history...
@@ -161,7 +295,7 @@ export function AttendanceHistoryTable({
             ) : history.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-24 text-center text-slate-500"
                 >
                   No attendance records found
@@ -191,6 +325,22 @@ export function AttendanceHistoryTable({
                       ? format(new Date(log.clockOut), "HH:mm")
                       : "-"}
                   </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="flex items-center gap-2">
+                      {renderThumb(
+                        log.clockInPhotoUrl,
+                        "Clock-in photo",
+                        log.id,
+                        "in"
+                      )}
+                      {renderThumb(
+                        log.clockOutPhotoUrl,
+                        "Clock-out photo",
+                        log.id,
+                        "out"
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell max-w-[200px]">
                     <ActivityCell
                       text={log.activities || ""}
@@ -214,6 +364,64 @@ export function AttendanceHistoryTable({
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={!!preview}
+        onOpenChange={(open) => {
+          if (!open && !replacing) {
+            setPreview(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-4">
+              <span>{preview?.label}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReplaceClick}
+                disabled={replacing}
+                className="rounded-lg"
+              >
+                {replacing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Retake / Replace
+                  </>
+                )}
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          {preview && (
+            <div className="flex items-center justify-center bg-black/5 dark:bg-black/30 rounded-lg overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview.url}
+                alt={preview.label}
+                className="max-h-[75vh] w-auto max-w-full rounded-lg"
+              />
+            </div>
+          )}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Replacing the photo will overwrite the previous one and keep the
+            original timestamp in the watermark.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
