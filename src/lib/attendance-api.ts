@@ -37,6 +37,29 @@ async function fetcher<T>(
   return data;
 }
 
+async function multipartFetcher<T>(
+  url: string,
+  token: string,
+  form: FormData,
+  method: "POST" | "PATCH"
+): Promise<T> {
+  // Intentionally do not set Content-Type — the browser adds the multipart boundary.
+  const response = await fetch(`${BASE_URL}${url}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || "An error occurred");
+  }
+
+  return data;
+}
+
 export const attendanceApi = {
   clockIn: async (
     token: string,
@@ -64,6 +87,61 @@ export const attendanceApi = {
         method: "PATCH",
         body: JSON.stringify(payload),
       }
+    );
+  },
+
+  clockInWithPhoto: async (
+    token: string,
+    payload: ClockInPayload,
+    photo: File | null
+  ): Promise<ApiResponse<AttendanceLog>> => {
+    const form = new FormData();
+    form.append("clockIn", payload.clockIn);
+    form.append("latClockIn", String(payload.latClockIn));
+    form.append("longClockIn", String(payload.longClockIn));
+    form.append("workType", payload.workType);
+    if (photo) form.append("photo", photo);
+    return multipartFetcher<ApiResponse<AttendanceLog>>(
+      "/attendance-log/clock-in-with-photo",
+      token,
+      form,
+      "POST"
+    );
+  },
+
+  clockOutWithPhoto: async (
+    token: string,
+    attendanceId: string,
+    payload: ClockOutPayload,
+    photo: File | null
+  ): Promise<ApiResponse<AttendanceLog>> => {
+    const form = new FormData();
+    form.append("clockOut", payload.clockOut);
+    form.append("latClockOut", String(payload.latClockOut));
+    form.append("longClockOut", String(payload.longClockOut));
+    form.append("activities", payload.activities);
+    if (photo) form.append("photo", photo);
+    return multipartFetcher<ApiResponse<AttendanceLog>>(
+      `/attendance-log/${attendanceId}/clock-out-with-photo`,
+      token,
+      form,
+      "PATCH"
+    );
+  },
+
+  replaceAttendancePhoto: async (
+    token: string,
+    attendanceId: string,
+    side: "in" | "out",
+    photo: File
+  ): Promise<ApiResponse<AttendanceLog>> => {
+    const form = new FormData();
+    form.append("photo", photo);
+    return multipartFetcher<ApiResponse<AttendanceLog>>(
+      `/attendance-log/${attendanceId}/photo?side=${side}`,
+      token,
+      form,
+      "PATCH"
     );
   },
 
