@@ -60,6 +60,8 @@ export interface AttendanceItem extends BaseLog {
   longClockIn: number | null;
   latClockIn: number | null;
   activities: string | null;
+  clockInPhotoUrl?: string | null;
+  clockOutPhotoUrl?: string | null;
   pauseHours: number;
   workingHours: number;
   overtimeHours: number;
@@ -106,6 +108,8 @@ export interface AttendanceLog {
   latClockOut: number | null;
   longClockOut: number | null;
   activities: string | null;
+  clockInPhotoUrl?: string | null;
+  clockOutPhotoUrl?: string | null;
   availability: boolean;
   date: string;
   workType: string;

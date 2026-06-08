@@ -60,6 +60,7 @@ import { EditLeaveDialog } from "@/components/attendance/EditLeaveDialog";
 import { DeleteLeaveDialog } from "@/components/attendance/DeleteLeaveDialog";
 import { AttendanceHistoryTable } from "@/components/attendance/AttendanceHistoryTable";
 import { LeaveHistoryTable } from "@/components/attendance/LeaveHistoryTable";
+import { PhotoCapture } from "@/components/attendance/PhotoCapture";
 
 export default function AttendancePage() {
   const { t } = useLanguage();
@@ -67,6 +68,8 @@ export default function AttendancePage() {
   const [time, setTime] = useState(new Date());
   const [activities, setActivities] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [clockInPhoto, setClockInPhoto] = useState<File | null>(null);
+  const [clockOutPhoto, setClockOutPhoto] = useState<File | null>(null);
 
   // Leave request form state
   const [leaveStartDate, setLeaveStartDate] = useState<string>("");
@@ -261,7 +264,8 @@ export default function AttendancePage() {
         longClockIn: location.lng,
       };
 
-      await clockIn(payload);
+      await clockIn(payload, clockInPhoto);
+      setClockInPhoto(null);
       fetchHistory();
       fetchLeaveHistory();
     } catch (error: any) {
@@ -278,8 +282,9 @@ export default function AttendancePage() {
     }
     setIsLoading(true);
     try {
-      await clockOut(activities, location.lat, location.lng);
+      await clockOut(activities, location.lat, location.lng, clockOutPhoto);
       setActivities("");
+      setClockOutPhoto(null);
       fetchHistory();
     } catch (error: any) {
       alert(error.message || "Failed to clock out");
@@ -545,31 +550,43 @@ export default function AttendancePage() {
                   onActivitiesChange={setActivities}
                   isLoading={isLoading}
                   onClockOut={() => handleClockOutAction(activities)}
+                  photo={clockOutPhoto}
+                  onPhotoChange={setClockOutPhoto}
                 />
               </div>
             ) : (
-              <Button
-                size="lg"
-                onClick={handleClockInAction}
-                disabled={
-                  isLoading ||
-                  !location ||
-                  (selectedType === "WFO" && !isWithinRange)
-                }
-                className="w-full h-16 text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20 rounded-2xl"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Clock className="mr-2 h-6 w-6" />
-                    {t.clockIn}
-                  </>
-                )}
-              </Button>
+              <div className="space-y-4">
+                <div className="bg-white/40 dark:bg-slate-800/40 p-4 rounded-2xl border border-white/20 dark:border-slate-700/30">
+                  <PhotoCapture
+                    label="Clock-in photo (optional)"
+                    value={clockInPhoto}
+                    onChange={setClockInPhoto}
+                    disabled={isLoading}
+                  />
+                </div>
+                <Button
+                  size="lg"
+                  onClick={handleClockInAction}
+                  disabled={
+                    isLoading ||
+                    !location ||
+                    (selectedType === "WFO" && !isWithinRange)
+                  }
+                  className="w-full h-16 text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20 rounded-2xl"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="mr-2 h-6 w-6" />
+                      {t.clockIn}
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </div>

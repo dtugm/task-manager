@@ -2,12 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { PhotoCapture } from "./PhotoCapture";
 
 interface ClockOutFormProps {
   activities: string;
   onActivitiesChange: (value: string) => void;
   onClockOut: () => void;
   isLoading: boolean;
+  photo?: File | null;
+  onPhotoChange?: (file: File | null) => void;
 }
 
 export function ClockOutForm({
@@ -15,12 +18,22 @@ export function ClockOutForm({
   onActivitiesChange,
   onClockOut,
   isLoading,
+  photo = null,
+  onPhotoChange,
 }: ClockOutFormProps) {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+      {onPhotoChange && (
+        <PhotoCapture
+          label="Clock-out photo (optional)"
+          value={photo}
+          onChange={onPhotoChange}
+          disabled={isLoading}
+        />
+      )}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Today's Activities
+          Today&apos;s Activities
         </Label>
         <Textarea
           value={activities}

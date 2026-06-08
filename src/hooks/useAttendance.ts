@@ -61,13 +61,19 @@ export function useAttendance() {
     }
   };
 
-  const handleClockIn = async (payload: ClockInPayload) => {
+  const handleClockIn = async (
+    payload: ClockInPayload,
+    photo?: File | null
+  ) => {
     const token = getAuthToken();
     if (!token) {
       throw new Error("Please login first");
     }
 
-    const resp = await attendanceApi.clockIn(token, payload);
+    const resp = photo
+      ? await attendanceApi.clockInWithPhoto(token, payload, photo)
+      : await attendanceApi.clockIn(token, payload);
+
     if (resp.success && resp.data) {
       setIsClockedIn(true);
       setAttendanceId(resp.data.id);
@@ -81,19 +87,29 @@ export function useAttendance() {
   const handleClockOut = async (
     activities: string,
     latitude: number,
-    longitude: number
+    longitude: number,
+    photo?: File | null
   ) => {
     const token = getAuthToken();
     if (!token || !attendanceId) {
       throw new Error("Invalid state");
     }
 
-    const resp = await attendanceApi.clockOut(token, attendanceId, {
+    const payload = {
       clockOut: new Date().toISOString(),
       latClockOut: latitude,
       longClockOut: longitude,
       activities,
-    });
+    };
+
+    const resp = photo
+      ? await attendanceApi.clockOutWithPhoto(
+          token,
+          attendanceId,
+          payload,
+          photo
+        )
+      : await attendanceApi.clockOut(token, attendanceId, payload);
 
     if (resp.success) {
       setIsClockedIn(false);
