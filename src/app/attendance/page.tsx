@@ -243,7 +243,7 @@ export default function AttendancePage() {
     try {
       // Helper to map ID to Display Name required by Backend
       const getWorkTypeString = (
-        id: string
+        id: string,
       ): "Work from Office" | "Work from Home" | "Field Work" => {
         switch (id) {
           case "WFO":
@@ -326,7 +326,7 @@ export default function AttendancePage() {
         1000,
         startDate || undefined,
         endDate || undefined,
-        filterWorkType
+        filterWorkType,
       );
 
       if (resp.success && resp.data?.data) {
@@ -353,7 +353,7 @@ export default function AttendancePage() {
 
         const fileName = `attendance_export_${format(
           new Date(),
-          "yyyyMMdd_HHmmss"
+          "yyyyMMdd_HHmmss",
         )}.xlsx`;
         XLSX.writeFile(workbook, fileName);
       } else {
@@ -376,7 +376,7 @@ export default function AttendancePage() {
         1,
         1000,
         filterLeaveStatus,
-        filterLeaveType
+        filterLeaveType,
       );
 
       if (resp.success && resp.data?.data) {
@@ -397,7 +397,7 @@ export default function AttendancePage() {
 
         const fileName = `leave_export_${format(
           new Date(),
-          "yyyyMMdd_HHmmss"
+          "yyyyMMdd_HHmmss",
         )}.xlsx`;
         XLSX.writeFile(workbook, fileName);
       } else {
@@ -430,7 +430,7 @@ export default function AttendancePage() {
                 <div
                   className={cn(
                     "absolute inset-0 blur-xl opacity-20 group-hover:opacity-30 transition-opacity rounded-full",
-                    isClockedIn ? "bg-green-500" : "bg-blue-500"
+                    isClockedIn ? "bg-green-500" : "bg-blue-500",
                   )}
                 ></div>
                 <div
@@ -438,7 +438,7 @@ export default function AttendancePage() {
                     "relative h-20 w-20 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white/20 dark:ring-slate-900/20",
                     isClockedIn
                       ? "bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-500/30"
-                      : "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/30"
+                      : "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/30",
                   )}
                 >
                   <Clock className="h-10 w-10 text-white animate-pulse" />
@@ -454,7 +454,7 @@ export default function AttendancePage() {
                       "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset",
                       isClockedIn
                         ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-green-500/20"
-                        : "bg-slate-500/10 text-slate-600 dark:text-slate-400 ring-slate-500/20"
+                        : "bg-slate-500/10 text-slate-600 dark:text-slate-400 ring-slate-500/20",
                     )}
                   >
                     {isClockedIn ? "Clocked In" : "Not Started"}
@@ -562,6 +562,7 @@ export default function AttendancePage() {
                     value={clockInPhoto}
                     onChange={setClockInPhoto}
                     disabled={isLoading}
+                    fileNamePrefix="clock-in"
                   />
                 </div>
                 <Button
