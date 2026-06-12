@@ -29,6 +29,7 @@ export function ClockOutForm({
           value={photo}
           onChange={onPhotoChange}
           disabled={isLoading}
+          fileNamePrefix="clock-out"
         />
       )}
       <div className="space-y-2">
